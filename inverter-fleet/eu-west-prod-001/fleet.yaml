@@ -1,0 +1,42 @@
+apiVersion: v1alpha1
+kind: Fleet
+metadata:
+  name: eu-west-prod-001
+spec:
+  selector:
+    matchLabels:
+      fleet: eu-west-prod-001
+
+  template:
+    spec:
+      os:
+        image: quay.io/solar-farms/ai-inverter:1.5.1
+
+      systemd:
+       matchPatterns:
+        - inverter.service
+        - rs485-protocol.service
+      podman:
+        matchPatterns:
+          - "ai-optimizer-model-server"
+          - "web-interface"
+
+      config:
+        - name: pull-secret-config
+          secretRef:
+            name: pull-secret
+            namespace: devices
+            mountPath: /etc/crio/pull-secret
+        - name: motd-update
+          inline:
+            ignition:
+              version: 3.4.0
+            storage:
+              files:
+                - contents:
+                    source: >-
+                      data:,This%20system%20is%20managed%20by%20flightctl.%0A
+                  mode: 422
+                  overwrite: true
+                  path: "/etc/motd"
+
