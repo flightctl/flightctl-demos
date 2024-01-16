@@ -1,0 +1,35 @@
+apiVersion: v1alpha1
+kind: Fleet
+metadata:
+  name: eu-west-prod-001
+spec:
+  selector:
+    matchLabels:
+      fleet: eu-west-prod-001
+  template:
+    spec:
+      os:
+        image: quay.io/solar-farms/ai-inverter:1.5.0
+
+      systemd:
+       matchPatterns:
+        - inverter.service
+        - rs485-protocol.service
+      containers:
+        matchPatterns:
+          - "*ai-optimizer-model-server*"
+          - "*web-interface*"
+          - "*control-loop*"
+
+      config:
+        - name: pull-secret-config
+          secretRef:
+            name: pull-secret
+            namespace: devices
+            mountPath: /etc/crio/pull-secret
+
+        - name:
+          files:
+            path: ../../deployment-manifests/
+            mountPath: /etc/microshift/manifests
+

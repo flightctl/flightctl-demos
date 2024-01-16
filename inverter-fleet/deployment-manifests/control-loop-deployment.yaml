@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: control-loop
+  namespace: inverter-edge
+  labels:
+    app: control-loop
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # we cannot have 2 control loops running at once
+
+  selector:
+    matchLabels:
+      app: control-loop
+  template:
+    metadata:
+      labels:
+        app: control-loop
+    spec:
+      terminationGracePeriodSeconds: 3
+      containers:
+      - name: control-loop
+        image: control-loop-embedded-image:latest
+        resources:
+          requests:
+            memory: "512Mi"
+          limits:
+            memory: "1Gi"
+            cpu: "1"

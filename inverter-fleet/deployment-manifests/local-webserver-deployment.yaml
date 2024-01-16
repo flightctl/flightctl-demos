@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: local-webserver
+  namespace: inverter-edge
+  labels:
+    app: local-webserver
+spec:
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: RollingUpdate
+
+  selector:
+    matchLabels:
+      app: local-webserver
+  template:
+    metadata:
+      labels:
+        app: local-webserver
+    spec:
+      terminationGracePeriodSeconds: 3
+      containers:
+      - name: web-server
+        image: inverter-webserver-embedded-image:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+         - containerPort: 80
+        resources:
+          requests:
+            memory: "512Mi"
+          limits:
+            memory: "1Gi"
+            cpu: "1"
+
+        livenessProbe:
+          httpGet:
+            path: /liveness
+            port: 80
+          initialDelaySeconds: 15
+          timeoutSeconds: 2
+          periodSeconds: 5
+          failureThreshold: 10
+
+        readinessProbe:
+          httpGet:
+            path: /readiness
+            port: 80
+          initialDelaySeconds: 10
+          timeoutSeconds: 3
+          periodSeconds: 10
+          failureThreshold: 3
