@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Red Hat - Accueil</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='stylesheets/styles.css') }}">
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <img src="{{ url_for('static', filename='images/rh_logo_black.svg') }}" alt="Logiciel Red Hat">
+        </div>
+    </header>
+    
+        <div id="container">
+        <canvas id="canvasOutput"></canvas>
+        <video autoplay="true" id="videoElement"></video>
+    </div>
+    
+    <div class = 'video'>
+        <img id="image">
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.1/socket.io.js" integrity="sha512-9mpsATI0KClwt+xVZfbcf2lJ8IFBAwsubJ6mI3rtULwyM3fBmQFzj0It4tGqxLOGQwGfJdk/G+fANnxfq9/cew==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+        var socket = io('http://pins-redhat.local:30000');
+        socket.on('response_back', function(image){
+            const image_id = document.getElementById('image');
+            console.log(image)
+            image_id.src = image;
+        });
+    </script>
+
+    <section class="banner">
+        <h2 class="btn" >Red Hat Pins Anomaly Detection</h2>
+    </section>
+
+    <section class="main-content">
+        <div class="description">
+            <h1>AI/ML at the Edge: From Data Science to field operational AI using FlightCtl</h1>
+        </div>
+    </section>
+
+    <footer>
+        <div class="social-media">
+        </div>
+        <div class="contact-info">
+            <p></p>
+        </div>
+    </footer>
+</body>
+</html>

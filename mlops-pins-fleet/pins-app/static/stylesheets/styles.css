@@ -1,0 +1,98 @@
+/* Réinitialisation des styles de base */
+
+body, h1, h2, p {
+    margin: 0;
+    padding: 0;
+}
+
+/* Styles généraux */
+
+body {
+    font-family: 'Overpass', sans-serif;
+    background-color: #fff;
+    color: #000;
+}
+
+header {
+    background-color: #000;
+    color: #ff0000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+}
+
+.logo img {
+    height: 50px;
+}
+
+nav ul {
+    list-style: none;
+}
+
+nav ul li {
+    display: inline;
+    margin-right: 20px;
+}
+
+nav a {
+    text-decoration: none;
+    color: #ff0000;
+}
+
+.banner {
+    background-image: url('banner-image.jpg');
+    background-size: cover;
+    text-align: center;
+    padding: 100px 0;
+    color: #fff;
+}
+
+.banner h1 {
+    font-size: 36px;
+    margin-bottom: 20px;
+}
+
+.banner p {
+    font-size: 18px;
+    margin-bottom: 20px;
+}
+
+.btn {
+    background-color: #ff0000;
+    color: #fff;
+    padding: 10px 20px;
+    text-decoration: none;
+    border-radius: 5px;
+}
+
+.main-content {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+}
+
+.image img {
+    max-width: 100%;
+}
+
+.description {
+    margin-left: 40px;
+}
+
+footer {
+    background-color: #000;
+    color: #fff;
+    text-align: center;
+    padding: 20px 0;
+}
+
+.social-media a {
+    margin: 0 10px;
+}
+
+.contact-info p {
+    margin-top: 10px;
+}
+

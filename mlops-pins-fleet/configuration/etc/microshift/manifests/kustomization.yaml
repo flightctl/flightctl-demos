@@ -1,0 +1,9 @@
+resources:
+- namespace.yaml
+- deployment.yaml
+- rolebinding.yaml
+- security-context-constraints.yaml
+- service-account.yaml
+- service.yaml
+- route.yaml
+namespace: pins-opendemo

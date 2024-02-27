@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pins-opendemo-deployment
+spec:
+  progressDeadlineSeconds: 600
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pins-opendemo
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: pins-opendemo
+    spec:
+      serviceAccountName: dev-pod-sa
+      containers:
+      - image: quay.io/flightctl/pins-demo:latest
+        env:
+        - name: EXTERNAL_PORT
+          value: "30000"
+        - name: SERVER_FQDN
+          value: orin.lab.local
+        imagePullPolicy: Always
+        name: pins-opendemo-container
+        ports:
+        - containerPort: 5000
+          protocol: TCP
+        resources: {}
+        securityContext:
+          privileged: true
+          runAsGroup: 39
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /dev/video1
+          name: video0
+        - mountPath: /dev/video0
+          name: video1
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        privileged: true
+        runAsGroup: 39
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - hostPath:
+          path: /dev/video0
+          type: ""
+        name: video0
+      - hostPath:
+          path: /dev/video1
+          type: ""
+        name: video1
