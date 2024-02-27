@@ -1,0 +1,37 @@
+apiVersion: v1alpha1
+kind: Fleet
+metadata:
+  name: mlops-pins-fleet
+spec:
+  selector:
+    matchLabels:
+      fleet: mlops-pins-fleet
+  template:
+    spec:
+      os:
+        image: quay.io/oglok/flightctl-agent-centos:latest
+
+      config:
+        - name: model-server
+          gitRef:
+            repoUrl: https://github.com/flightctl/flightctl-demos.git
+            repoRef: main
+            repoPath: /inverter-fleet/deployment-manifests/
+            mountPath: /etc/microshift/manifests
+        - name: pull-secret
+          secretRef:
+            name: device-pull-secret
+            namespace: devices
+            mountPath: /etc/crio/pull-secret
+
+      containers:
+        matchPatterns:
+          - "*ai-optimizer-model-server*"
+          - "*web-interface*"
+          - "*control-loop*"
+
+      systemd:
+       matchPatterns:
+        - inverter.service
+        - rs485-protocol.service
+

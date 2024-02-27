@@ -1,0 +1,28 @@
+# Create custom SCC
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
+metadata:
+  name: hostpath-scc
+runAsUser:
+  type: RunAsAny
+seLinuxContext:
+  type: RunAsAny
+fsGroup:
+  type: RunAsAny
+supplementalGroups:
+  type: RunAsAny
+allowHostDirVolumePlugin: true
+allowHostIPC: true 
+allowHostNetwork: true
+allowHostPID: true
+allowHostPorts: true
+allowPrivilegeEscalation: true
+allowPrivilegedContainer: true
+allowedCapabilities:
+- '*'
+volumes:
+- '*'
+users:
+- "system:serviceaccount:pins-opendemo:dev-pod-sa"
+
+
