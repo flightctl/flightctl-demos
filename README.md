@@ -7,7 +7,7 @@ This repo contains a series of demos showcasing the edge management capabilities
 
 The `bootc-agent-images` folder contains recipes to build two flavors of bootc images. [Bootc](https://github.com/containers/bootc) provides transactional, in-place operating system images using OCI container images.
 
-This repository provides a recipe for a Fedora ELN based image and a beta RHEL 9.4 based image, both, with the flightctl agent installed in the image. The Fedora recipe provides only the flightctl agent while the RHEL flavor also provides MicroShift as a lightweight Kubernetes runtime.
+This repository provides a recipe for a Fedora ELN based image and a Centos 9 Stream based image, both, with the flightctl agent installed in the image.
 
 The config.yaml is pointing at the public instance of the FlightCtl service. However, in order to be able to do the enrollment, some files are needed such as CA and enrollment keypair. Please, ask the team for these files in order to produce an operational device agent against the public service. If you have your own instance of FlightCtl, modify the config.yaml file and add your own files.
 
