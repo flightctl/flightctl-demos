@@ -1,0 +1,9 @@
+FROM quay.io/flightctl/flightctl-agent-centos:bootstrap
+
+ADD etc etc
+
+RUN rm -rf /opt && \
+    mkdir -p /opt/crio
+RUN dnf install -y microshift && \
+    systemctl enable microshift.service
+
