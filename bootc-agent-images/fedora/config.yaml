@@ -1,5 +1,4 @@
-agent:
-  server: https://api.flightctl.edge-devices.net
-  enrollmentUi: https://ui.flightctl.edge-devices.net
-  fetchSpecInterval: 1m0s
-  statusUpdateInterval: 1m0s
+managementServerEndpoint: https://api.flightctl.edge-devices.net
+enrollmentUiEndpoint: https://ui.flightctl.edge-devices.net
+fetchSpecInterval: 0m10s
+statusUpdateInterval: 0m10s
