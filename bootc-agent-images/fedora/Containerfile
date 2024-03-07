@@ -15,6 +15,6 @@ RUN dnf install -y flightctl-agent && \
 
 ## Add your flightctl configuration and certificates
 ADD config.yaml /etc/flightctl/
-ADD ca.crt /etc/flightctl
-ADD client-enrollment.* /etc/flightctl/
+ADD ca.crt /etc/flightctl/certs/
+ADD client-enrollment.* /etc/flightctl/certs/
 
