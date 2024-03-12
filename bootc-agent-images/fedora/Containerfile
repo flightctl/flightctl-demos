@@ -6,7 +6,7 @@ RUN dnf install -y flightctl-agent && \
     systemctl enable flightctl-agent
 
 ## Uncomment to add your own ssh key
-# COPY replace_rsa.pub /usr/etc-system/root.keys
+# COPY flightctl_rsa.pub /usr/etc-system/root.keys
 # RUN touch /etc/ssh/sshd_config.d/30-auth-system.conf; \
 #     mkdir -p /usr/etc-system/; \
 #     echo 'AuthorizedKeysFile /usr/etc-system/%u.keys' >> /etc/ssh/sshd_config.d/30-auth-system.conf; \
