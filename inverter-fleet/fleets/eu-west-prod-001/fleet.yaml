@@ -6,10 +6,15 @@ spec:
   selector:
     matchLabels:
       fleet: eu-west-prod-001
+  updatePolicy:
+    failThreshold: 20%
+    batch: 10%
+    maintenanceWindow: "22:00-06:00 Europe/London"
+
   template:
     spec:
       os:
-        image: quay.io/solar-farms/ai-inverter:1.5.0
+        image: quay.io/solar-farms/ai-inverter:1.6.0
 
       config:
         - name: model-server
