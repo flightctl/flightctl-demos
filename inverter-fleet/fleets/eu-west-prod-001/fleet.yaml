@@ -9,6 +9,8 @@ spec:
   template:
     spec:
       os:
+        # TODO: needs to include:
+        # https://copr.fedorainfracloud.org/coprs/miyunari/redhat-opentelemetry-collector/package/opentelemetry-collector/
         image: quay.io/solar-farms/ai-inverter:1.5.0
 
       config:
@@ -18,6 +20,12 @@ spec:
             repoRef: main
             repoPath: /inverter-fleet/deployment-manifests/
             mountPath: /etc/microshift/manifests
+        - name: observability-agent
+          gitRef:
+            repoUrl: https://github.com/flightctl/flightctl-demos.git
+            repoRef: main
+            repoPath: /inverter-fleet/observability/
+            mountPath: /etc/otel-collector/
         - name: pull-secret
           secretRef:
             name: device-pull-secret
@@ -34,4 +42,4 @@ spec:
        matchPatterns:
         - inverter.service
         - rs485-protocol.service
-
+        - opentelemetry-collector.service
