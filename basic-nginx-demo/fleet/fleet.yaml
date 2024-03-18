@@ -10,3 +10,23 @@ spec:
     spec:
       os:
         image: quay.io/flightctl/flightctl-agent-basic-nginx:latest
+      config:
+        - name: motd-update
+          configType: InlineConfigProviderSpec
+          inline:
+            ignition:
+              version: 3.4.0
+            storage:
+              files:
+                - contents:
+                    source: >-
+                      data:,This%20system%20is%20managed%20by%20flightctl.%0A
+                  mode: 422
+                  overwrite: true
+                  path: "/etc/motd"
+        - name: model-server
+          gitRef:
+            repoUrl: https://github.com/flightctl/flightctl-demos.git
+            repoRef: main
+            repoPath: /basic-nginx-demo/configuration/etc/microshift/manifests/
+            mountPath: /etc/microshift/manifests
