@@ -25,8 +25,8 @@ spec:
                   overwrite: true
                   path: "/etc/motd"
         - name: model-server
-          gitRef:
-            repoUrl: https://github.com/flightctl/flightctl-demos.git
-            repoRef: main
-            repoPath: /basic-nginx-demo/configuration/etc/microshift/manifests/
-            mountPath: /etc/microshift/manifests
+          configType: GitConfigProviderSpec
+          gitRef:  
+            repository: basic-nginx-demo
+            targetRevision: main
+            path: /basic-nginx-demo/configuration
