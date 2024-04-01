@@ -7,3 +7,6 @@ RUN rm -rf /opt && \
 RUN dnf install -y microshift && \
     systemctl enable microshift.service
 
+RUN mkdir -p /opt/cni && mkdir -p /var/opt/cni/bin && rm -rf /opt/cni/bin && ln -s /var/opt/cni/bin /opt/cni/bin
+RUN [ ! -L /var/run ] && rm -rf /var/run && ln -s /run /var/
+
