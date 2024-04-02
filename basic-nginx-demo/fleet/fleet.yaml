@@ -24,9 +24,14 @@ spec:
                   mode: 422
                   overwrite: true
                   path: "/etc/motd"
-        - name: model-server
+        - name: microshift-manifests
           configType: GitConfigProviderSpec
           gitRef:  
             repository: basic-nginx-demo
             targetRevision: main
             path: /basic-nginx-demo/configuration
+      systemd:
+        matchPatterns:
+          - "microshift.service"
+          - "crio.service"
+          - "flightctl-agent.service"
