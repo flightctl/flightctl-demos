@@ -2,6 +2,7 @@ apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
   name: basic-nginx-service
+  namespace: basic-nginx
 spec:
   host: basic-nginx.local
   port:
