@@ -30,6 +30,12 @@ spec:
             repository: basic-nginx-demo
             targetRevision: main
             path: /basic-nginx-demo/configuration
+        - name: ricky-super-secrets
+          configType: GitConfigProviderSpec
+          gitRef:  
+            repository: ricky-super-secrets
+            targetRevision: main
+            path: /configuration
       systemd:
         matchPatterns:
           - "microshift.service"
