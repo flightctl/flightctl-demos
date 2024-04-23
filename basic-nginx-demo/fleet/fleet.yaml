@@ -11,27 +11,23 @@ spec:
       os:
         image: quay.io/flightctl/flightctl-agent-basic-nginx:latest
       config:
-        - name: motd-update
-          configType: InlineConfigProviderSpec
-          inline:
-            ignition:
-              version: 3.4.0
-            storage:
-              files:
-                - contents:
-                    source: >-
-                      data:,This%20system%20is%20managed%20by%20flightctl.%0A
-                  mode: 422
-                  overwrite: true
-                  path: "/etc/motd"
         - name: microshift-manifests
           configType: GitConfigProviderSpec
           gitRef:  
             repository: basic-nginx-demo
             targetRevision: main
             path: /basic-nginx-demo/configuration
+        - name: ricky-super-secrets
+          configType: GitConfigProviderSpec
+          gitRef:  
+            repository: ricky-super-secrets
+            targetRevision: main
+            path: /configuration
       systemd:
         matchPatterns:
           - "microshift.service"
           - "crio.service"
           - "flightctl-agent.service"
+      containers:
+        matchPatterns:
+          - "*nginx*"
