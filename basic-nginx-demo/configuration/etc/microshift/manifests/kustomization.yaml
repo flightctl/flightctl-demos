@@ -3,3 +3,5 @@ resources:
 - deployment.yaml
 - service.yaml
 - route.yaml
+- crd-klusterlet.yaml
+- agent-registration.yaml

@@ -1,21 +1,34 @@
 apiVersion: v1alpha1
 kind: Fleet
 metadata:
-  name: basic-nginx-fleet
+  name: basic-nginx-fl33t
 spec:
   selector:
     matchLabels:
-      fleet: basic-nginx-fleet
+      fleet: basic-nginx-fl33t
   template:
     spec:
       os:
         image: quay.io/flightctl/flightctl-agent-basic-nginx:latest
       config:
+        - name: motd-update
+          configType: InlineConfigProviderSpec
+          inline:
+            ignition:
+              version: 3.4.0
+            storage:
+              files:
+                - contents:
+                    source: >-
+                      data:,This%20system%20is%20managed%20by%20flightctl.%0A
+                  mode: 422
+                  overwrite: true
+                  path: "/etc/motd"
         - name: microshift-manifests
           configType: GitConfigProviderSpec
           gitRef:  
-            repository: basic-nginx-demo
-            targetRevision: main
+            repository: basic-nginx-d3mo
+            targetRevision: demo
             path: /basic-nginx-demo/configuration
         - name: ricky-super-secrets
           configType: GitConfigProviderSpec
@@ -30,4 +43,5 @@ spec:
           - "flightctl-agent.service"
       containers:
         matchPatterns:
-          - "*nginx*"
+          - "nginx"
+          - "hello-microshift"
