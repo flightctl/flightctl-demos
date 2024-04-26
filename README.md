@@ -25,8 +25,21 @@ or
 make bootc-centos QUAYUSER=$yourownquayuser
 ```
 
+or
+
+```
+make bootc-rhel QUAYUSER=$yourownquayuser
+```
+
+
 In order to make the deployment of this image easy, you can convert it to QCOW2 format and use it as a raw disk in Libvirt. The following command will create a file called disk.qcow2 within the output folder:
 
 ```
-make qcow2-bootc flavor={fedora,centos}
+make qcow2-bootc flavor={fedora,centos,rhel}
+```
+
+Also you can create a raw image to burn to the device disk with:
+
+```
+make raw-bootc QUAYUSER=$yourownquayuser flavor={fedora,centos,rhel}
 ```
