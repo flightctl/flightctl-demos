@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: edge-ws-connector
+  namespace: edge-ws-connector
+  labels:
+    app: edge-ws-connector
+spec:
+  selector:
+    app: edge-ws-connector
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+      name: 8080-tcp
+    - protocol: TCP
+      port: 8081
+      targetPort: 8081
+      name: 8081-tcp

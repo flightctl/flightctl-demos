@@ -1,0 +1,10 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: edge-cam
+  namespace: edge-cam
+data:
+  WS_PORT: '8080'
+  CLI_PORT: '8080'
+  VIDEO_DEVICE: 'video0'
+  CONNECTOR_SVC: 'edge-ws-connector.edge-ws-connector.svc.cluster.local'

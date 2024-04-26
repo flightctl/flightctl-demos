@@ -1,0 +1,8 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# reference the resources in edge-cam and edge-controller folders
+resources:
+  - ./edge-cam
+  - ./edge-controller
+  - ./edge-ws-connector

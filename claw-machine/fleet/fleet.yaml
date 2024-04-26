@@ -1,0 +1,46 @@
+apiVersion: v1alpha1
+kind: Fleet
+metadata:
+  name: claw-machine-fleet
+  labels:
+spec:
+  selector:
+    matchLabels:
+      fleet: claw-machine-fleet
+  template:
+    spec:
+      os:
+        image: quay.io/mparrade/flightctl-agent-rhel:latest
+      config:
+        - name: motd-update
+          configType: InlineConfigProviderSpec
+          inline:
+            ignition:
+              version: 3.4.0
+            storage:
+              files:
+                - contents:
+                    source: >-
+                      data:,This%20system%20is%20managed%20by%20flightctl.%0A
+                  mode: 422
+                  overwrite: true
+                  path: "/etc/motd"
+        - name: microshift-manifests
+          configType: GitConfigProviderSpec
+          gitRef:  
+            repository: flightctl-demos
+            targetRevision: main
+            path: /claw-machine/configuration
+        - name: pull-secret
+          configType: GitConfigProviderSpec
+          gitRef:
+            repository: mparra-pull-secret
+            targetRevision: main
+            path: /configuration
+      systemd:
+        matchPatterns:
+          - "microshift.service"
+          - "crio.service"
+          - "flightctl-agent.service"
+          - "opentelemetry-collector-rhde.service"
+          - "firewalld.service"

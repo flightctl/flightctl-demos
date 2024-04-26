@@ -1,0 +1,5 @@
+management-endpoint: https://api.flightctl.edge-devices.net
+enrollment-endpoint: https://api.flightctl.edge-devices.net
+enrollment-ui-endpoint: https://ui.flightctl.edge-devices.net
+spec-fetch-interval: 0m10s
+status-update-interval: 0m10s

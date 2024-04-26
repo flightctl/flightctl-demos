@@ -1,0 +1,59 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: edge-controller
+  namespace: edge-controller
+  labels:
+    app: edge-controller
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: edge-controller
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: edge-controller
+    spec:
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      terminationGracePeriodSeconds: 30
+      securityContext: {}
+      serviceAccountName: edge-controller
+      containers:
+        - resources: {}
+          terminationMessagePath: /dev/termination-log
+          name: edge-controller
+          env:        
+            - name: WS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: edge-controller
+                  key: WS_PORT
+            - name: CONNECTOR_SVC
+              valueFrom:
+                configMapKeyRef:
+                  name: edge-controller
+                  key: CONNECTOR_SVC
+          securityContext: 
+            privileged: true
+          imagePullPolicy: Always
+          terminationMessagePolicy: File
+          image: >-
+            quay.io/rciots/edge-controller:latest
+          volumeMounts:
+            - name: hostpath-dev
+              mountPath: /dev
+      volumes:
+        - name: hostpath-dev
+          hostPath:
+              path: /dev
+      dnsPolicy: ClusterFirst
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600

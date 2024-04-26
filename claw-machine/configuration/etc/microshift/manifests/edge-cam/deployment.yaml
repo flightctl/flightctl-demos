@@ -1,0 +1,74 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: edge-cam
+  namespace: edge-cam
+  labels:
+    app: edge-cam
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: edge-cam
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: edge-cam
+    spec:
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      terminationGracePeriodSeconds: 30
+      securityContext: {}
+      serviceAccountName: edge-cam
+      containers:
+        - resources: {}
+          terminationMessagePath: /dev/termination-log
+          name: edge-cam
+          env:        
+            - name: WS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: edge-cam
+                  key: WS_PORT
+            - name: CLI_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: edge-cam
+                  key: CLI_PORT
+            - name: VIDEO_DEVICE
+              valueFrom:
+                configMapKeyRef:
+                  name: edge-cam
+                  key: VIDEO_DEVICE
+            - name: CONNECTOR_SVC
+              valueFrom:
+                configMapKeyRef:
+                  name: edge-cam
+                  key: CONNECTOR_SVC
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+            - containerPort: 8081
+              protocol: TCP
+          securityContext: 
+            privileged: true
+          imagePullPolicy: Always
+          terminationMessagePolicy: File
+          image: >-
+            quay.io/rciots/edge-cam:latest
+          volumeMounts:
+            - name: hostpath-dev
+              mountPath: /dev
+      volumes:
+        - name: hostpath-dev
+          hostPath:
+              path: /dev
+      dnsPolicy: ClusterFirst
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 25%
+      maxSurge: 25%
+  revisionHistoryLimit: 10
+  progressDeadlineSeconds: 600

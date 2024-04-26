@@ -1,0 +1,4 @@
+*.crt
+*.key
+/output
+config.json

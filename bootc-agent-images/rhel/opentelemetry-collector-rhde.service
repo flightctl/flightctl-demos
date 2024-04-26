@@ -1,0 +1,15 @@
+[Unit]
+Description=RHDE Observability Agent
+After=opentelemetry-copy-certs.service
+
+[Service]
+Type=simple
+ExecStartPre=export device_fingerprint=$(openssl x509 -in /var/lib/flightctl/certs/otel.crt -subject -noout  | awk -F ' ' '{print $3}')
+ExecStart=/usr/bin/opentelemetry-collector --config /etc/opentelemetry-collector-rhde/config.yaml
+User=rhde-observability
+Group=rhde-observability
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
