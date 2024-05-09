@@ -23,6 +23,12 @@ basic-nginx:
 	sudo podman build -t quay.io/${QUAYUSER}/flightctl-agent-basic-nginx:latest -f basic-nginx-demo/bootc/Containerfile basic-nginx-demo/bootc/
 	sudo podman push quay.io/${QUAYUSER}/flightctl-agent-basic-nginx:latest
 
+extra-rhel:
+	@echo "Building Flightctl demo with microshift and otel-collector..."
+	sudo podman pull quay.io/${QUAYUSER}/flightctl-agent-rhel:latest
+	sudo podman build -t quay.io/${QUAYUSER}/flightctl-agent-extra-rhel:latest -f basic-extra-rhel/bootc/Containerfile basic-extra-rhel/bootc/
+	sudo podman push quay.io/${QUAYUSER}/flightctl-agent-extra-rhel:latest
+
 qcow2-bootc:
 	@echo "Building FlightCtl Agent qcow2 image..."
 	mkdir -p output
@@ -42,4 +48,4 @@ raw-bootc:
         quay.io/centos-bootc/bootc-image-builder:latest \
 		--type raw \
 		--config /config.json \
-		quay.io/$(QUAYUSER)/flightctl-agent-$(flavor):latest
+		quay.io/$(QUAYUSER)/$(image):latest

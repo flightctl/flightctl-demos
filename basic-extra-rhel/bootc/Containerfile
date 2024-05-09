@@ -1,0 +1,21 @@
+FROM quay.io/mparrade/flightctl-agent-rhel:latest
+
+ADD etc etc
+
+RUN dnf install -y opentelemetry-collector
+
+ADD opentelemetry-collector-rhde.service /usr/lib/systemd/system/
+
+RUN systemctl enable opentelemetry-collector-rhde.service
+
+RUN /usr/bin/getent group rhde-observability > /dev/null || /usr/sbin/groupadd -r rhde-observability && \
+    /usr/bin/getent passwd rhde-observability > /dev/null || /usr/sbin/useradd -r -M -s /sbin/nologin -g rhde-observability -G systemd-journal rhde-observability
+
+RUN rm -rf /opt && \
+    mkdir -p /opt/crio
+
+RUN dnf install -y microshift && \
+    systemctl enable microshift.service
+
+RUN mkdir -p /opt/cni && mkdir -p /var/opt/cni/bin && rm -rf /opt/cni/bin && ln -s /var/opt/cni/bin /opt/cni/bin
+RUN [ ! -L /var/run ] && rm -rf /var/run && ln -s /run /var/

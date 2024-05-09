@@ -1,23 +1,12 @@
-FROM registry-proxy.engineering.redhat.com/rh-osbs/rhel9-rhel_bootc:rhel-9.4
+FROM registry.redhat.io/rhel9/rhel-bootc:9.4
 
 ADD etc etc
 
-RUN dnf install -y flightctl-agent opentelemetry-collector firewalld && \
+RUN dnf install -y flightctl-agent && \
     systemctl enable flightctl-agent.service
-
-ADD opentelemetry-collector-rhde.service /usr/lib/systemd/system/
-
-RUN systemctl enable opentelemetry-collector-rhde.service && \
-    systemctl enable firewalld
-
-RUN /usr/bin/getent group rhde-observability > /dev/null || /usr/sbin/groupadd -r rhde-observability && \
-    /usr/bin/getent passwd rhde-observability > /dev/null || /usr/sbin/useradd -r -M -s /sbin/nologin -g rhde-observability -G systemd-journal rhde-observability
 
 RUN rm -rf /opt && \
     mkdir -p /opt/crio
-
-RUN dnf install -y microshift && \
-    systemctl enable microshift.service
 
 ## Uncomment to add your own ssh key
 # COPY flightctl_rsa.pub /usr/etc-system/root.keys
@@ -31,6 +20,3 @@ RUN dnf install -y microshift && \
 ADD config.yaml /etc/flightctl/
 ADD ca.crt /etc/flightctl/certs/
 ADD client-enrollment.* /etc/flightctl/certs/
-
-RUN mkdir -p /opt/cni && mkdir -p /var/opt/cni/bin && rm -rf /opt/cni/bin && ln -s /var/opt/cni/bin /opt/cni/bin
-RUN [ ! -L /var/run ] && rm -rf /var/run && ln -s /run /var/

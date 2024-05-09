@@ -40,6 +40,28 @@ make qcow2-bootc flavor={fedora,centos,rhel}
 
 Also you can create a raw image to burn to the device disk with:
 
+* Create a config.json with the user, password and ssh key like:
 ```
-make raw-bootc QUAYUSER=$yourownquayuser flavor={fedora,centos,rhel}
+{
+    "blueprint": {
+      "customizations": {
+        "user": [
+          {
+            "name": "[USER]",
+            "password": "[PASSWORD]",
+            "key": "[SSH_KEY]",
+            "groups": [
+              "wheel"
+            ]
+          }
+        ]
+      }
+    }
+  }
+```
+
+The following command will create a file called disk.raw within the output folder:
+
+```
+make raw-bootc QUAYUSER=$yourownquayuser image=flightctl-agent-extra-rhel 
 ```
