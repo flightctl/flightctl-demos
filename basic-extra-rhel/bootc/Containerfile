@@ -1,4 +1,4 @@
-FROM quay.io/mparrade/flightctl-agent-rhel:latest
+FROM quay.io/flightctl/flightctl-agent-rhel:latest
 
 ADD etc etc
 
