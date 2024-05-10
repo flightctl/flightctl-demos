@@ -25,8 +25,43 @@ or
 make bootc-centos QUAYUSER=$yourownquayuser
 ```
 
+or
+
+```
+make bootc-rhel QUAYUSER=$yourownquayuser
+```
+
+
 In order to make the deployment of this image easy, you can convert it to QCOW2 format and use it as a raw disk in Libvirt. The following command will create a file called disk.qcow2 within the output folder:
 
 ```
-make qcow2-bootc flavor={fedora,centos}
+make qcow2-bootc flavor={fedora,centos,rhel}
+```
+
+Also you can create a raw image to burn to the device disk with:
+
+* Create a config.json with the user, password and ssh key like:
+```
+{
+    "blueprint": {
+      "customizations": {
+        "user": [
+          {
+            "name": "[USER]",
+            "password": "[PASSWORD]",
+            "key": "[SSH_KEY]",
+            "groups": [
+              "wheel"
+            ]
+          }
+        ]
+      }
+    }
+  }
+```
+
+The following command will create a file called disk.raw within the output folder:
+
+```
+make raw-bootc QUAYUSER=$yourownquayuser image=flightctl-agent-extra-rhel 
 ```
