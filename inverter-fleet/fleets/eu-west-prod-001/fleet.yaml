@@ -13,16 +13,11 @@ spec:
 
       config:
         - name: model-server
+          configType: GitConfigProviderSpec
           gitRef:
-            repoUrl: https://github.com/flightctl/flightctl-demos.git
-            repoRef: main
+            repository: defaultRepo
             repoPath: /inverter-fleet/deployment-manifests/
             mountPath: /etc/microshift/manifests
-        - name: pull-secret
-          secretRef:
-            name: device-pull-secret
-            namespace: devices
-            mountPath: /etc/crio/pull-secret
 
       containers:
         matchPatterns:
