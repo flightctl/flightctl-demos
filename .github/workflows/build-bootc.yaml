@@ -1,6 +1,6 @@
 name: "Build Bootc Agent Bootstrap Images"
 on:
-  pull_request:
+  pull_request_target:
   schedule:
     - cron: '0 */12 * * *'
 
