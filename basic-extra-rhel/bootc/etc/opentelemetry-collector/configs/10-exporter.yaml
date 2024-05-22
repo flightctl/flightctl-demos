@@ -1,0 +1,12 @@
+---
+service:
+  pipelines:
+    logs:
+      receivers: [journald, otlp/microshift]
+      exporters: [debug]
+    metrics:
+      receivers: [hostmetrics, hostmetrics/disk, otlp/microshift]
+      exporters: [debug]
+    traces:
+      receivers: [otlp/microshift]
+      exporters: [debug]
