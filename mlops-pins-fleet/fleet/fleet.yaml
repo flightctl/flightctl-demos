@@ -16,8 +16,8 @@ spec:
           configType: GitConfigProviderSpec
           gitRef:
             repository: defaultRepo
-            repoPath: /inverter-fleet/deployment-manifests/
-            mountPath: /etc/microshift/manifests
+            targetRevision: main
+            path: /inverter-fleet/deployment-manifests/
 
       containers:
         matchPatterns:
