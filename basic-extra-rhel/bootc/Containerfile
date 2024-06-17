@@ -6,7 +6,7 @@ RUN dnf install -y opentelemetry-collector
 
 ADD opentelemetry-collector-rhde.service /usr/lib/systemd/system/
 
-RUN systemctl enable opentelemetry-collector-rhde.service
+RUN systemctl enable opentelemetry-collector.service
 
 RUN /usr/bin/getent group rhde-observability > /dev/null || /usr/sbin/groupadd -r rhde-observability && \
     /usr/bin/getent passwd rhde-observability > /dev/null || /usr/sbin/useradd -r -M -s /sbin/nologin -g rhde-observability -G systemd-journal rhde-observability
