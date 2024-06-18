@@ -17,6 +17,11 @@ jobs:
         ports:
           - 5000:5000
 
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
     steps:
       - name: Checkout
         uses: actions/checkout@v2
@@ -70,12 +75,22 @@ jobs:
 
       - name: Push CentOS image
         uses: docker/build-push-action@v2
+        id: push
         with:
           context: bootc-agent-images/centos
           file: bootc-agent-images/centos/Containerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.REGISTRY_USER }}/flightctl-agent-centos:bootstrap
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.5.0
+
+      - name: Sign CentOS
+        run: |
+          cosign sign \
+            --yes \
+            ${{ env.REGISTRY }}/${{ env.REGISTRY_USER }}/flightctl-agent-centos@${{ steps.push.outputs.digest }}
 
   build-and-push-fedora:
     runs-on: ubuntu-latest
@@ -84,6 +99,11 @@ jobs:
         image: registry:2
         ports:
           - 5000:5000
+
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
 
     steps:
       - name: Checkout
@@ -137,6 +157,7 @@ jobs:
             exit $?
 
       - name: Push Fedora image
+        id: push
         uses: docker/build-push-action@v2
         with:
           context: bootc-agent-images/fedora
@@ -145,4 +166,11 @@ jobs:
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.REGISTRY_USER }}/flightctl-agent-fedora:bootstrap
 
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.5.0
 
+      - name: Sign Fedora
+        run: |
+          cosign sign \
+            --yes \
+            ${{ env.REGISTRY }}/${{ env.REGISTRY_USER }}/flightctl-agent-fedora@${{ steps.push.outputs.digest }}
