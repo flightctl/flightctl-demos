@@ -5,7 +5,8 @@ on:
     - cron: '0 */12 * * *'
 
 env:
-  QUAY_ORG: quay.io/flightctl
+  REGISTRY: quay.io
+  REPOSITORY: ${{ github.actor }}
 
 jobs:
   build-and-push-centos:
@@ -39,7 +40,7 @@ jobs:
       - name: Login to Quay.io
         uses: docker/login-action@v3
         with:
-          registry: quay.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ secrets.QUAY_FLIGHTCTL_INFRA_ROBOT_USERNAME }}
           password: ${{ secrets.QUAY_FLIGHTCTL_INFRA_ROBOT_PASSWORD }}
 
@@ -50,7 +51,7 @@ jobs:
           file: bootc-agent-images/centos/Containerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: quay.io/flightctl/flightctl-agent-centos:bootstrap
+          tags: ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/flightctl-agent-centos:bootstrap
 
 
   build-and-push-fedora:
@@ -84,7 +85,7 @@ jobs:
       - name: Login to Quay.io
         uses: docker/login-action@v3
         with:
-          registry: quay.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ secrets.QUAY_FLIGHTCTL_INFRA_ROBOT_USERNAME }}
           password: ${{ secrets.QUAY_FLIGHTCTL_INFRA_ROBOT_PASSWORD }}
 
@@ -95,6 +96,6 @@ jobs:
           file: bootc-agent-images/fedora/Containerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: quay.io/flightctl/flightctl-agent-fedora:bootstrap
+          tags: ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/flightctl-agent-fedora:bootstrap
 
 
