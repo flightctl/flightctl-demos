@@ -1,10 +1,9 @@
-[copr:copr.fedorainfracloud.org:miyunari:redhat-opentelemetry-collector]
-name=Copr repo for flightctl-dev owned by @redhat-et
-baseurl=https://download.copr.fedorainfracloud.org/results/miyunari/redhat-opentelemetry-collector/rhel-9-$basearch/
+name=Copr repo for redhat-opentelemetry-collector-main owned by RHOSDT Team
+baseurl=https://download.copr.fedorainfracloud.org/results/frzifus/redhat-opentelemetry-collector-main/fedora-$releasever-$basearch/
 type=rpm-md
 skip_if_unavailable=True
 gpgcheck=1
-gpgkey=https://download.copr.fedorainfracloud.org/results/miyunari/redhat-opentelemetry-collector/pubkey.gpg
+gpgkey=https://download.copr.fedorainfracloud.org/results/frzifus/redhat-opentelemetry-collector-main/pubkey.gpg
 repo_gpgcheck=0
 enabled=1
 enabled_metadata=1

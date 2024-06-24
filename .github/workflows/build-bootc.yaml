@@ -79,4 +79,3 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ env.REGISTRY }}/${{ secrets.QUAY_FLIGHTCTL_INFRA_ROBOT_USERNAME }}/flightctl-agent-${{ matrix.flavor }}:bootstrap
-
