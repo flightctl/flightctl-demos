@@ -1,4 +1,4 @@
-FROM quay.io/centos-bootc/fedora-bootc:eln
+FROM quay.io/fedora/fedora-bootc:40
 
 ADD etc etc
 ADD 00-fedora.toml /usr/lib/bootc/install/
