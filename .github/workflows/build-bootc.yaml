@@ -12,6 +12,11 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
   
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
     strategy:
       matrix:
         flavor: [centos, fedora, rhel]
@@ -73,6 +78,7 @@ jobs:
           exit $(docker inspect $ID --format='{{.State.ExitCode}}')
 
       - name: Push image
+        id: push
         uses: docker/build-push-action@v2
         with:
           context: bootc-agent-images/${{ matrix.flavor }}
@@ -81,3 +87,11 @@ jobs:
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/flightctl-agent-${{ matrix.flavor }}:bootstrap
 
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.5.0
+
+      - name: Sign image
+        run: |
+          cosign sign \
+            --yes \
+            ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/flightctl-agent-${{ matrix.flavor }}@${{ steps.push.outputs.digest }}
