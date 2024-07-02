@@ -1,0 +1,35 @@
+apiVersion: v1alpha1
+kind: Fleet
+metadata:
+  name: whisper-fleet
+spec:
+  selector:
+    matchLabels:
+      fleet: whisper-fleet
+  template:
+    spec:
+      os:
+        image: quay.io/flightctl/flightctl-agent-whisper:latest
+      config:
+        - name: motd-update
+          configType: InlineConfigProviderSpec
+          inline:
+            ignition:
+              version: 3.4.0
+            storage:
+              files:
+                - contents:
+                    source: >-
+                      data:,This%20system%20is%20managed%20by%20flightctl.%0A
+                  mode: 422
+                  overwrite: true
+                  path: "/etc/motd"
+        - name: audio-source
+          configType: GitConfigProviderSpec
+          gitRef:  
+            repository: flightctl-demos
+            targetRevision: main
+            path: /demos/whisper-fleet/configuration/audio.wav
+      systemd:
+        matchPatterns:
+          - "flightctl-agent.service"

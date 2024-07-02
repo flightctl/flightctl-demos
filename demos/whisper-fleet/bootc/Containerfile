@@ -1,0 +1,6 @@
+FROM quay.io/flightctl/flightctl-agent-fedora:bootstrap
+
+RUN dnf install -y python3-pip
+RUN pip install pipewire_python faster_whisper
+
+ADD whisper.py whisper.py
