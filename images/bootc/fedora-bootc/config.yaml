@@ -1,5 +1,11 @@
-management-endpoint: https://api.flightctl.edge-devices.net
-enrollment-endpoint: https://api.flightctl.edge-devices.net
-enrollment-ui-endpoint: https://ui.flightctl.edge-devices.net
+enrollment-service:
+  authentication:
+    client-certificate: certs/client-enrollment.crt
+    client-key: certs/client-enrollment.key
+  service:
+    certificate-authority: certs/ca.crt
+    server: https://api.flightctl.edge-devices.net
+  enrollment-ui-endpoint: https://ui.flightctl.edge-devices.net
 spec-fetch-interval: 0m10s
 status-update-interval: 0m10s
+tpm-path: /dev/tpmrm0
