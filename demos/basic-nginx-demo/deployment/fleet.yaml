@@ -29,7 +29,7 @@ spec:
           gitRef:  
             repository: basic-nginx-demo
             targetRevision: main
-            path: /basic-nginx-demo/configuration
+            path: /demos/basic-nginx-demo/configuration
         - name: ricky-super-secrets
           configType: GitConfigProviderSpec
           gitRef:  
