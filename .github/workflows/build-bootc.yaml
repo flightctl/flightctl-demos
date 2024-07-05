@@ -27,7 +27,7 @@ jobs:
 
       - name: Modify Containerfile
         run: |
-          pushd bootc-agent-images/${{ matrix.flavor }}
+          pushd images/bootc/${{ matrix.flavor }}-bootc
           echo "${{ secrets.FLIGHTCTL_RSA_PUB }}" > flightctl_rsa.pub
           sed -i -e 's/^# COPY flightctl_rsa.pub \/usr\/etc-system\/root.keys/COPY flightctl_rsa.pub \/usr\/etc-system\/root.keys/' \
                  -e 's/^# RUN touch \/etc\/ssh\/sshd_config.d\/30-auth-system.conf;/RUN touch \/etc\/ssh\/sshd_config.d\/30-auth-system.conf;/' \
@@ -65,8 +65,8 @@ jobs:
         id: build
         uses: docker/build-push-action@v5
         with:
-          context: bootc-agent-images/${{ matrix.flavor }}
-          file: bootc-agent-images/${{ matrix.flavor }}/Containerfile
+          context: images/bootc/${{ matrix.flavor }}-bootc
+          file: images/bootc/${{ matrix.flavor }}-bootc/Containerfile
           load: true
           tags: user/flightctl-agent:test
 
@@ -81,8 +81,8 @@ jobs:
         id: push
         uses: docker/build-push-action@v2
         with:
-          context: bootc-agent-images/${{ matrix.flavor }}
-          file: bootc-agent-images/${{ matrix.flavor }}/Containerfile
+          context: images/bootc/${{ matrix.flavor }}-bootc
+          file: images/bootc/${{ matrix.flavor }}-bootc/Containerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/flightctl-agent-${{ matrix.flavor }}:bootstrap
