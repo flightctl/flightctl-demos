@@ -4,7 +4,7 @@ enrollment-service:
     client-key: certs/client-enrollment.key
   service:
     certificate-authority: certs/ca.crt
-    server: https://api.flightctl.edge-devices.net
+    server: https://agent-api.flightctl.edge-devices.net
   enrollment-ui-endpoint: https://ui.flightctl.edge-devices.net
 spec-fetch-interval: 0m10s
 status-update-interval: 0m10s
