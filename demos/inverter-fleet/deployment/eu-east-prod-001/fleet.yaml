@@ -17,7 +17,7 @@ spec:
           gitRef:
             repository: default-repo
             targetRevision: main
-            path: /inverter-fleet/deployment-manifests/
+            path: /demos/inverter-fleet/configuration/
 
       containers:
         matchPatterns:
