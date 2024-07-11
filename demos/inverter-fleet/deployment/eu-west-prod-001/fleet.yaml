@@ -16,7 +16,7 @@ spec:
           configType: GitConfigProviderSpec
           gitRef:
             repository: default-repo
-            targetRevision: add-k8s-secret
+            targetRevision: main
             path: /demos/inverter-fleet/configuration/
         - name: secret-example
           configType: KubernetesSecretProviderSpec
