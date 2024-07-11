@@ -16,8 +16,14 @@ spec:
           configType: GitConfigProviderSpec
           gitRef:
             repository: default-repo
-            targetRevision: main
+            targetRevision: add-k8s-secret
             path: /demos/inverter-fleet/configuration/
+        - name: secret-example
+          configType: KubernetesSecretProviderSpec
+          secretRef:
+            mountPath: /etc/secrets
+            name: inverter-test-secret
+            namespace: inverter-edge
 
       containers:
         matchPatterns:
