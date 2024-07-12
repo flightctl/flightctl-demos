@@ -1,0 +1,36 @@
+apiVersion: v1alpha1
+kind: Fleet
+metadata:
+  name: quadlet-wordpress-fleet
+spec:
+  selector:
+    matchLabels:
+      fleet: quadlet-wordpress-fleet
+  template:
+    spec:
+      os:
+        image: quay.io/flightctl/flightctl-agent-centos:bootstrap
+      config:
+        - name: motd-update
+          configType: InlineConfigProviderSpec
+          inline:
+            ignition:
+              version: 3.4.0
+            storage:
+              files:
+                - contents:
+                    source: >-
+                      data:,This%20system%20is%20managed%20by%20flightctl.%0A
+                  mode: 422
+                  overwrite: true
+                  path: "/etc/motd"
+        - name: quadlets
+          configType: GitConfigProviderSpec
+          gitRef:  
+            repository: quadlet-wordpress-demo
+            targetRevision: main
+            path: /demos/quadlet-wordpress-demo/configuration
+      systemd:
+        matchPatterns:
+          - "wordpress-app.service"
+          - "wordpress-db.service"
