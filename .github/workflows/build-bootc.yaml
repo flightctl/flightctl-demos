@@ -3,13 +3,14 @@ on:
   pull_request:
   schedule:
     - cron: '0 */12 * * *'
+  workflow_dispatch:
 
 env:
   REGISTRY: quay.io
   REPOSITORY: flightctl
 
 jobs:
-  build-and-push:
+  build-and-push-bootstrap-images:
     runs-on: ubuntu-latest
   
     permissions:
@@ -18,12 +19,13 @@ jobs:
       id-token: write
 
     strategy:
+      fail-fast: false
       matrix:
         flavor: [centos, fedora, rhel]
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+      - name: Clone repository
+        uses: actions/checkout@v4
 
       - name: Modify Containerfile
         run: |
@@ -69,6 +71,8 @@ jobs:
           file: images/bootc/${{ matrix.flavor }}-bootc/Containerfile
           load: true
           tags: user/flightctl-agent:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Test image
         run: |
@@ -79,13 +83,15 @@ jobs:
 
       - name: Push image
         id: push
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v5
         with:
           context: images/bootc/${{ matrix.flavor }}-bootc
           file: images/bootc/${{ matrix.flavor }}-bootc/Containerfile
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/flightctl-agent-${{ matrix.flavor }}:bootstrap
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Install cosign
         uses: sigstore/cosign-installer@v3.5.0
@@ -95,3 +101,96 @@ jobs:
           cosign sign \
             --yes \
             ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/flightctl-agent-${{ matrix.flavor }}@${{ steps.push.outputs.digest }}
+
+
+  build-bootc-images:
+    needs: build-and-push-bootstrap-images
+  
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        flavor: [rhel, centos, fedora]
+        arch: [amd64, arm64]
+        format: [qcow2, raw]
+
+    steps:
+      - name: Build bootc image
+        run: |
+          mkdir output
+          
+          if [ "${{ matrix.arch }}" == "arm64" ]; then
+            sudo apt install -y qemu-user-static
+          fi
+   
+          sudo podman run \
+            --rm \
+            -it \
+            --privileged \
+            --pull=newer \
+            --security-opt label=type:unconfined_t \
+            -v $(pwd)/output:/output \
+            quay.io/centos-bootc/bootc-image-builder:latest \
+              --target-arch ${{ matrix.arch }} \
+              --type ${{ matrix.format }} \
+              ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/flightctl-agent-${{ matrix.flavor }}:bootstrap
+ 
+          if [ "${{ matrix.format }}" == "raw" ]; then
+            OUTPUT=output/image/disk.raw
+          else
+            OUTPUT=output/qcow2/disk.qcow2
+          fi
+
+
+          sudo mv $OUTPUT "${{ matrix.arch }}-${{ matrix.format }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.flavor }}-${{ matrix.arch}}-${{ matrix.format }}
+          path: ${{ matrix.arch }}-${{ matrix.format }}
+          compression-level: 0
+        
+  push-bootc-images:
+    needs: build-bootc-images
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        flavor: [rhel, centos, fedora]
+
+    steps:
+      - name: Clone repository
+        uses: actions/checkout@v4
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          sudo rm -rf /usr/local/lib/android
+
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: bootc-images
+          pattern: ${{ matrix.flavor }}-*
+          merge-multiple: true
+        
+      - name: Build and push disk images
+        run: |
+          cp .github/workflow-scripts/buildah-build-and-push-manifest.sh bootc-images
+          URL=${{ env.REGISTRY }}/${{ env.REPOSITORY }}/flightctl-agent-${{ matrix.flavor }}
+
+          podman run \
+            --rm \
+            -v $(pwd)/bootc-images:/bootc-images \
+            -e "BUILDAH_USERNAME=${{ secrets.QUAY_FLIGHTCTL_INFRA_ROBOT_USERNAME }}" \
+            -e "BUILDAH_PASSWORD=${{ secrets.QUAY_FLIGHTCTL_INFRA_ROBOT_PASSWORD }}" \
+            -e "BUILDAH_URL=$URL:bootc" \
+            quay.io/buildah/stable:v1.36.0 \
+              /bootc-images/buildah-build-and-push-manifest.sh
