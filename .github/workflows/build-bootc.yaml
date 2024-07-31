@@ -12,7 +12,7 @@ env:
 jobs:
   build-and-push-bootstrap-images:
     runs-on: ubuntu-latest
-  
+
     permissions:
       contents: read
       packages: write
@@ -96,12 +96,16 @@ jobs:
       - name: Install cosign
         uses: sigstore/cosign-installer@v3.5.0
 
-      - name: Sign image
+      - name: Sign images
         run: |
+          cosign login \
+            -u "${{ secrets.QUAY_FLIGHTCTL_INFRA_ROBOT_USERNAME }}" \
+            -p "${{ secrets.QUAY_FLIGHTCTL_INFRA_ROBOT_PASSWORD }}" \
+            quay.io
+
           cosign sign \
             --yes \
             ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/flightctl-agent-${{ matrix.flavor }}@${{ steps.push.outputs.digest }}
-
 
   build-bootc-images:
     needs: build-and-push-bootstrap-images
@@ -156,6 +160,11 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
     strategy:
       fail-fast: false
       matrix:
@@ -182,6 +191,7 @@ jobs:
           merge-multiple: true
         
       - name: Build and push disk images
+        id: build-and-push
         run: |
           cp .github/workflow-scripts/buildah-build-and-push-manifest.sh bootc-images
           URL=${{ env.REGISTRY }}/${{ env.REPOSITORY }}/flightctl-agent-${{ matrix.flavor }}
@@ -194,3 +204,21 @@ jobs:
             -e "BUILDAH_URL=$URL:bootc" \
             quay.io/buildah/stable:v1.36.0 \
               /bootc-images/buildah-build-and-push-manifest.sh
+          
+          DIGEST=$(cat bootc-images/digest)
+          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.5.0
+
+
+      - name: Sign images
+        run: |
+          cosign login \
+            -u "${{ secrets.QUAY_FLIGHTCTL_INFRA_ROBOT_USERNAME }}" \
+            -p "${{ secrets.QUAY_FLIGHTCTL_INFRA_ROBOT_PASSWORD }}" \
+            quay.io
+          
+          cosign sign \
+            --yes \
+            ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/flightctl-agent-${{ matrix.flavor }}@${{ steps.build-and-push.outputs.digest }}
