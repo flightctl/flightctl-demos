@@ -19,4 +19,6 @@ for FILE in *; do
 		--arch $ARCH
 done
 
-buildah manifest push --all bootc-images docker://$BUILDAH_URL
+buildah manifest push \
+	--all bootc-images docker://$BUILDAH_URL \
+	--digestfile digest
