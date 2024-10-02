@@ -6,6 +6,7 @@ enrollment-service:
     certificate-authority: certs/ca.crt
     server: https://agent-api.flightctl.edge-devices.net
   enrollment-ui-endpoint: https://ui.flightctl.edge-devices.net
+grpc-management-endpoint: grpcs://agent-grpc.flightctl.edge-devices.net
 spec-fetch-interval: 0m10s
 status-update-interval: 0m10s
 tpm-path: /dev/tpmrm0
