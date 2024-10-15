@@ -1,0 +1,6 @@
+FROM quay.io/flightctl/flightctl-agent-centos:bootstrap
+
+
+RUN touch /etc/systemd/system/wordpress-app.service && \
+systemctl enable wordpress-app.service
+

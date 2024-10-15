@@ -9,7 +9,7 @@ spec:
   template:
     spec:
       os:
-        image: quay.io/flightctl/flightctl-agent-centos:bootstrap
+        image: quay.io/oglok/flightctl-device:basic
       config:
         - name: motd-update
           configType: InlineConfigProviderSpec
