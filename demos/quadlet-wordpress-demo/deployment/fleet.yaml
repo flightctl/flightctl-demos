@@ -22,7 +22,8 @@ spec:
           gitRef:  
             repository: quadlet-wordpress-demo
             targetRevision: main
-            path: /demos/quadlet-wordpress-demo/configuration
+            path: /demos/quadlet-wordpress-demo/configuration/etc/containers/systemd/
+            mountPath: /etc/containers/systemd
       systemd:
         matchPatterns:
           - "wordpress-app.service"
