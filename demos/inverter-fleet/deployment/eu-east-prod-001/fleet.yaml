@@ -13,17 +13,10 @@ spec:
 
       config:
         - name: example-server-a
-          configType: GitConfigProviderSpec
           gitRef:
             repository: default-repo
             targetRevision: main
             path: /inverter-fleet/deployment-manifests/
-
-      containers:
-        matchPatterns:
-          - "ai-optimizer-model-server"
-          - "web-interface"
-          - "control-loop"
 
       systemd:
        matchPatterns:

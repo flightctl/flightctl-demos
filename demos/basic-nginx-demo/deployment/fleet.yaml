@@ -12,19 +12,16 @@ spec:
         image: quay.io/flightctl/flightctl-agent-basic-nginx:latest
       config:
         - name: motd-update
-          configType: InlineConfigProviderSpec
           inline:
             - path: "/etc/motd"
               content: "This system is managed by flightctl."
               mode: 0644
         - name: microshift-manifests
-          configType: GitConfigProviderSpec
           gitRef:  
             repository: basic-nginx-demo
             targetRevision: main
             path: /demos/basic-nginx-demo/configuration
         - name: ricky-super-secrets
-          configType: GitConfigProviderSpec
           gitRef:  
             repository: ricky-super-secrets
             targetRevision: main

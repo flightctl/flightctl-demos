@@ -12,13 +12,11 @@ spec:
         image: quay.io/flightctl/flightctl-agent-centos:bootstrap
       config:
         - name: motd-update
-          configType: InlineConfigProviderSpec
           inline:
             - path: "/etc/motd"
               content: "This system is managed by flightctl."
               mode: 0644
         - name: quadlets
-          configType: GitConfigProviderSpec
           gitRef:  
             repository: quadlet-wordpress-demo
             targetRevision: main
