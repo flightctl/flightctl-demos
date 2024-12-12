@@ -49,3 +49,6 @@ raw-bootc:
 		--type raw \
 		--config /config.json \
 		quay.io/$(QUAYUSER)/$(image):latest
+
+clean:
+    - rm -f -r output
