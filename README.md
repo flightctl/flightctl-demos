@@ -38,6 +38,12 @@ In order to make the deployment of this image easy, you can convert it to QCOW2 
 make qcow2-bootc QUAYUSER=$yourownquayuser flavor={fedora,centos,rhel}
 ```
 
+Before starting a new build, clean up the previous build artifacts in the output folder.
+
+```
+make clean
+```
+
 Also you can create a raw image to burn to the device disk with:
 
 * Create a config.json with the user, password and ssh key like:
