@@ -51,4 +51,4 @@ raw-bootc:
 		quay.io/$(QUAYUSER)/$(image):latest
 
 clean:
-    - rm -f -r output
+	- rm -f -r output
