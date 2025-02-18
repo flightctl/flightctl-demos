@@ -1,0 +1,85 @@
+---
+name: 'Setup Podman 5'
+description: 'Installs Podman 5 and configures OverlayFS storage driver and Sigstore signature attachments'
+
+inputs:
+  registry:
+    description: 'The OCI registry to configure'
+    required: true
+    default: 'quay.io'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Ensure package cache is up-to-date and Podman deps are installed
+      if: ${{ runner.os == 'Linux' }}
+      shell: bash
+      run: |          
+        sudo apt-get -y update
+        sudo apt-get -y install podman qemu-user-static
+
+    - name: Install Podman 5
+      if: ${{ (runner.os == 'Linux') && (runner.arch == 'X64') }}
+      shell: bash
+      run: |
+        curl -LO http://launchpadlibrarian.net/770361138/libsubid5_4.16.0-7ubuntu1_amd64.deb
+        curl -LO http://launchpadlibrarian.net/765852331/libgpg-error0_1.51-3_amd64.deb
+        curl -LO http://launchpadlibrarian.net/756695457/libassuan9_3.0.1-2_amd64.deb
+        curl -LO http://launchpadlibrarian.net/777220428/libgpgme11t64_1.24.2-1ubuntu1_amd64.deb
+        curl -LO http://launchpadlibrarian.net/777115575/podman_5.4.0+ds1-1_amd64.deb
+        curl -LO http://launchpadlibrarian.net/768628414/crun_1.19.1-1_amd64.deb
+
+        sudo dpkg -i libsubid5_4.16.0-7ubuntu1_amd64.deb
+        sudo dpkg -i libgpg-error0_1.51-3_amd64.deb
+        sudo dpkg -i libassuan9_3.0.1-2_amd64.deb
+        sudo dpkg -i libgpgme11t64_1.24.2-1ubuntu1_amd64.deb
+        sudo dpkg -i podman_5.4.0+ds1-1_amd64.deb
+        sudo dpkg -i crun_1.19.1-1_amd64.deb
+
+    - name: Install Podman 5
+      if: ${{ (runner.os == 'Linux') && (runner.arch == 'ARM64') }}
+      shell: bash
+      run: |
+        curl -LO http://launchpadlibrarian.net/770361435/libsubid5_4.16.0-7ubuntu1_arm64.deb
+        curl -LO http://launchpadlibrarian.net/765852045/libgpg-error0_1.51-3_arm64.deb
+        curl -LO http://launchpadlibrarian.net/756694234/libassuan9_3.0.1-2_arm64.deb
+        curl -LO http://launchpadlibrarian.net/777221666/libgpgme11t64_1.24.2-1ubuntu1_arm64.deb
+        curl -LO http://launchpadlibrarian.net/777116645/podman_5.4.0+ds1-1_arm64.deb
+        curl -LO http://launchpadlibrarian.net/723791962/libyajl2_2.1.0-5build1_arm64.deb
+        curl -LO http://launchpadlibrarian.net/768628595/crun_1.19.1-1_arm64.deb
+
+        sudo dpkg -i libsubid5_4.16.0-7ubuntu1_arm64.deb
+        sudo dpkg -i libgpg-error0_1.51-3_arm64.deb
+        sudo dpkg -i libassuan9_3.0.1-2_arm64.deb
+        sudo dpkg -i libgpgme11t64_1.24.2-1ubuntu1_arm64.deb
+        sudo dpkg -i podman_5.4.0+ds1-1_arm64.deb
+        sudo dpkg -i libyajl2_2.1.0-5build1_arm64.deb
+        sudo dpkg -i crun_1.19.1-1_arm64.deb
+
+    - name: Configure Podman to use the OverlayFS storage driver
+      if: ${{ runner.os == 'Linux' }}
+      shell: bash
+      run: |
+        sudo rm -rf /var/lib/containers/storage
+        sudo mkdir -p /etc/containers
+        sudo tee "/etc/containers/storage.conf" > /dev/null <<-'EOF'
+          [storage]
+          driver = "overlay"
+          runroot = "/run/containers/storage"
+          graphroot = "/var/lib/containers/storage"
+        EOF
+
+    - name: Configure Podman to attach Sigstore signatures
+      if: ${{ runner.os == 'Linux' }}
+      shell: bash
+      run: |
+        sudo mkdir -p /etc/containers/registries.d
+        sudo tee "/etc/containers/registries.d/${{ input.registry }}.yaml" > /dev/null <<-'EOF'
+          docker:
+            ${{ input.registry }}:
+              use-sigstore-attachments: true
+        EOF
+
+    - name: Print installed Podman version
+      shell: bash
+      run: podman version

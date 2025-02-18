@@ -1,0 +1,240 @@
+name: Build OS images (bootc)
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '*/bootc'
+  push:
+    branches:
+      - main
+    paths:
+      - '*/bootc'
+
+jobs:
+  find-changed-bootc-images:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Clone the repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Get changed bootc images
+        id: changed-dirs
+        uses: tj-actions/changed-files@v45
+        with:
+          dir_names: true
+          files: |
+            **/bootc/**
+          matrix: true
+
+      - name: Set output in matrix format
+        id: set-output
+        run: |
+          dirs='${{ steps.changed-dirs.outputs.all_changed_files }}'
+          dirs=$(echo "${dirs}" | jq -c 'map(rtrimstr("/bootc"))')
+          echo "changed_images=${dirs}"
+          echo "changed_images=${dirs}" >> "$GITHUB_OUTPUT"
+
+    outputs:
+      images: ${{ steps.set-output.outputs.changed_images }}
+
+
+  build-bootc-images:
+    needs: [find-changed-bootc-images]
+
+    if: ${{ needs.find-changed-bootc-images.outputs.images != '' }}
+    strategy:
+      matrix:
+        image: ${{ fromJSON(needs.find-changed-bootc-images.outputs.images) }}
+        runner: ["ubuntu-24.04","ubuntu-24.04-arm"]
+      max-parallel: 4
+      fail-fast: false
+
+    permissions:
+        contents: read
+  
+    runs-on: ${{ matrix.runner }}
+
+    container:
+      image: registry.access.redhat.com/ubi9/ubi
+      options: --privileged
+
+    env:
+      REGISTRY: quay.io
+      REPOSITORY: flightctl-demos
+      IMAGE: ${{ matrix.image }}
+      ARCH: ${{ (matrix.runner == 'ubuntu-24.04-arm') && 'arm64' || 'amd64' }}
+
+    steps:
+      - name: Clone the repository
+        uses: actions/checkout@v4
+
+      - name: Install Podman 5 andcontainer tools and configure them to attach Sigstore signatures
+        run: |
+          dnf -y install podman
+          tee "/etc/containers/registries.d/${{ env.REGISTRY }}.yaml" > /dev/null <<EOF
+            docker:
+              ${{ env.REGISTRY }}:
+                use-sigstore-attachments: true
+          EOF
+
+      - name: Log in to OCI registry
+        run: podman login -u '${{ secrets.QUAY_PUBLISHER_USERNAME }}' -p '${{ secrets.QUAY_PUBLISHER_PASSWORD }}' ${{ env.REGISTRY }}
+
+      - name: Build bootc image
+        run: |
+          pushd ${IMAGE}/bootc
+          podman build \
+            -t ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::7}-${{ env.ARCH }} \
+            -f Containerfile.${{ env.ARCH }} .
+          popd
+
+      - name: Push image to registry and sign it
+        run: |
+          printf '%s' '${{ secrets.SIGNING_KEY_PRIVATE }}' > ./signingkey.private
+          podman push \
+            --sign-by-sigstore-private-key ./signingkey.private \
+            ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::7}-${{ env.ARCH }}
+
+
+  build-bootc-manifestlist:
+    needs: [find-changed-bootc-images,build-bootc-images]
+
+    if: ${{ needs.find-changed-bootc-images.outputs.images != '' }}
+    strategy:
+      matrix:
+        image: ${{ fromJSON(needs.find-changed-bootc-images.outputs.images) }}
+      max-parallel: 4
+      fail-fast: false
+
+    runs-on: ubuntu-24.04
+
+    container:
+      image: registry.access.redhat.com/ubi9/ubi
+      options: --privileged
+
+    env:
+      REGISTRY: quay.io
+      REPOSITORY: flightctl-demos
+      IMAGE: ${{ matrix.image }}
+
+    steps:
+      - name: Install container tools and configure them to attach Sigstore signatures
+        run: |
+          dnf -y install podman
+          tee "/etc/containers/registries.d/${{ env.REGISTRY }}.yaml" > /dev/null <<EOF
+            docker:
+              ${{ env.REGISTRY }}:
+                use-sigstore-attachments: true
+          EOF
+
+      - name: Log in to OCI registry
+        run: podman login -u '${{ secrets.QUAY_PUBLISHER_USERNAME }}' -p '${{ secrets.QUAY_PUBLISHER_PASSWORD }}' ${{ env.REGISTRY }}
+
+      - name: Create manifest list
+        run: |
+          podman manifest create ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::7}
+          for arch in amd64 arm64; do
+            podman manifest add \
+              ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::7} \
+              docker://${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::7}-${arch}
+          done
+
+      - name: Push manifest list to registry and sign it
+        run: |
+          printf '%s' '${{ secrets.SIGNING_KEY_PRIVATE }}' > ./signingkey.private
+          podman manifest push --all \
+            --sign-by-sigstore-private-key ./signingkey.private \
+            ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::7} \
+            docker://${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::7}
+
+      - name: Tag manifest list as "latest" and sign it
+        run: |
+          podman tag \
+            ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::7} \
+            ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:latest
+          podman push \
+            --sign-by-sigstore-private-key ./signingkey.private \
+            ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:latest
+
+
+  build-bootc-disk-images:
+    needs: [find-changed-bootc-images]
+
+    if: ${{ needs.find-changed-bootc-images.outputs.images != '' }}
+    strategy:
+      matrix:
+        image: ${{ fromJSON(needs.find-changed-bootc-images.outputs.images) }}
+        runner: ["ubuntu-24.04","ubuntu-24.04-arm"]
+        format: [qcow2, raw]
+      max-parallel: 4
+      fail-fast: false
+
+    runs-on: ${{ matrix.runner }}
+
+    env:
+      REGISTRY: quay.io
+      REPOSITORY: flightctl-demos
+      SUBREPOSITORY: install/
+      IMAGE: ${{ matrix.image }}
+      ARCH: ${{ (matrix.runner == 'ubuntu-24.04-arm') && 'arm64' || 'amd64' }}
+
+    steps:
+      - name: Clone the repository
+        uses: actions/checkout@v4
+
+      - name: Setup Podman 5
+        uses: ./.github/actions/setup-podman5
+
+      - name: Log in to OCI registry
+        run: podman login -u '${{ secrets.QUAY_PUBLISHER_USERNAME }}' -p '${{ secrets.QUAY_PUBLISHER_PASSWORD }}' ${{ env.REGISTRY }}
+
+      - name: Build disk image
+        run: |
+          mkdir -p "${GITHUB_WORKSPACE}/output"
+
+          BOOTC_IMAGE="${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:afa66ec-${{ env.ARCH }}" # ${GITHUB_SHA::7}-${{ env.ARCH }}
+
+          sudo podman pull "${BOOTC_IMAGE}"
+
+          sudo podman run --rm -it --privileged --pull=newer \
+            --security-opt label=type:unconfined_t \
+            -v "${GITHUB_WORKSPACE}/output:/output" \
+            -v /var/lib/containers/storage:/var/lib/containers/storage \
+            quay.io/centos-bootc/bootc-image-builder:latest \
+              --target-arch ${{ env.ARCH }} \
+              --type ${{ matrix.format }} \
+              "${BOOTC_IMAGE}"
+
+          sudo chown -R $(whoami):$(whoami) "${GITHUB_WORKSPACE}/output"
+
+          case ${{ matrix.format }} in
+            raw)   echo "DISK_IMAGE=output/image/disk.raw" >> $GITHUB_ENV;;
+            qcow2) echo "DISK_IMAGE=output/qcow2/disk.qcow2" >> $GITHUB_ENV;;
+          esac
+
+      - name: Compress disk image
+        run: |
+          gzip "${DISK_IMAGE}"
+
+      - name: Push compressed disk image to registry and sign it
+        run: |
+          printf '%s' '${{ secrets.SIGNING_KEY_PRIVATE }}' > ./signingkey.private
+
+          MANIFEST_NAME="${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.SUBREPOSITORY }}${{ env.IMAGE }}:afa66ec-${{ matrix.format }}-${{ env.ARCH }}" #${GITHUB_SHA::7}-${{ matrix.format }}-${{ env.ARCH }}"
+
+          podman manifest create "${MANIFEST_NAME}"
+
+          podman manifest add \
+            --artifact --artifact-type application/vnd.diskimage.${{ matrix.format }}.gzip \
+            --arch=${{ env.ARCH }} --os=linux \
+            "${MANIFEST_NAME}" "${DISK_IMAGE}.gz"
+
+          podman manifest push \
+            --sign-by-sigstore-private-key ./signingkey.private \
+            "${MANIFEST_NAME}" "docker://${MANIFEST_NAME}"
