@@ -103,9 +103,9 @@ jobs:
 
 
   build-bootc-manifestlist:
-    needs: [find-changed-bootc-images,build-bootc-images]
+    needs: [build-bootc-images]
 
-    if: ${{ needs.find-changed-bootc-images.outputs.images != '' }}
+    if: ${{ needs.find-changed-bootc-images.outputs.images != [] }}
     strategy:
       matrix:
         image: ${{ fromJSON(needs.find-changed-bootc-images.outputs.images) }}
@@ -164,9 +164,9 @@ jobs:
 
 
   build-bootc-disk-images:
-    needs: [find-changed-bootc-images]
+    needs: [build-bootc-images]
 
-    if: ${{ needs.find-changed-bootc-images.outputs.images != '' }}
+    if: ${{ needs.find-changed-bootc-images.outputs.images != [] }}
     strategy:
       matrix:
         image: ${{ fromJSON(needs.find-changed-bootc-images.outputs.images) }}
