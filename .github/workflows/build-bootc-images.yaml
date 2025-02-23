@@ -47,7 +47,7 @@ jobs:
   build-bootc-images:
     needs: [find-changed-bootc-images]
 
-    if: ${{ needs.find-changed-bootc-images.outputs.images != '' }}
+    if: ${{ needs.find-changed-bootc-images.outputs.images != '[]' }}
     strategy:
       matrix:
         image: ${{ fromJSON(needs.find-changed-bootc-images.outputs.images) }}
@@ -105,7 +105,7 @@ jobs:
   build-bootc-manifestlist:
     needs: [build-bootc-images]
 
-    if: ${{ needs.find-changed-bootc-images.outputs.images != [] }}
+    if: ${{ needs.find-changed-bootc-images.outputs.images != '[]' }}
     strategy:
       matrix:
         image: ${{ fromJSON(needs.find-changed-bootc-images.outputs.images) }}
@@ -166,7 +166,7 @@ jobs:
   build-bootc-disk-images:
     needs: [build-bootc-images]
 
-    if: ${{ needs.find-changed-bootc-images.outputs.images != [] }}
+    if: ${{ needs.find-changed-bootc-images.outputs.images != '[]' }}
     strategy:
       matrix:
         image: ${{ fromJSON(needs.find-changed-bootc-images.outputs.images) }}
