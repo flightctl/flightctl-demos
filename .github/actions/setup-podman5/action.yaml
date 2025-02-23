@@ -74,9 +74,9 @@ runs:
       shell: bash
       run: |
         sudo mkdir -p /etc/containers/registries.d
-        sudo tee "/etc/containers/registries.d/${{ input.registry }}.yaml" > /dev/null <<-'EOF'
+        sudo tee "/etc/containers/registries.d/${{ inputs.registry }}.yaml" > /dev/null <<-'EOF'
           docker:
-            ${{ input.registry }}:
+            ${{ inputs.registry }}:
               use-sigstore-attachments: true
         EOF
 
