@@ -35,8 +35,16 @@ jobs:
       - name: Set output in matrix format
         id: set-output
         run: |
-          dirs='${{ steps.changed-dirs.outputs.all_changed_files }}'
-          dirs=$(echo "${dirs}" | jq -c 'map(rtrimstr("/bootc"))')
+          case "${{ github.event_name }}" in
+            pull_request|push)
+              dirs='${{ steps.changed-dirs.outputs.all_changed_files }}'
+              ;;
+            workflow_dispatch)
+              dirs=$(ls -d */bootc 2> /dev/null | jq -R . | jq -s .)
+              ;;
+            *) echo "Unknown event: ${{ github.event_name }}" && exit 1;;
+          esac
+          dirs=$(echo "${dirs}" | jq -c 'map(split("/") | .[-2])')
           echo "changed_images=${dirs}"
           echo "changed_images=${dirs}" >> "$GITHUB_OUTPUT"
 
