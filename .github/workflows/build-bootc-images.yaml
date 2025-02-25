@@ -206,7 +206,7 @@ jobs:
         run: |
           mkdir -p "${GITHUB_WORKSPACE}/output"
 
-          BOOTC_IMAGE="${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:afa66ec-${{ env.ARCH }}" # ${GITHUB_SHA::7}-${{ env.ARCH }}
+          BOOTC_IMAGE="${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::7}-${{ env.ARCH }}"
 
           sudo podman pull "${BOOTC_IMAGE}"
 
@@ -234,7 +234,7 @@ jobs:
         run: |
           printf '%s' '${{ secrets.SIGNING_KEY_PRIVATE }}' > ./signingkey.private
 
-          MANIFEST_NAME="${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.SUBREPOSITORY }}${{ env.IMAGE }}:afa66ec-${{ matrix.format }}-${{ env.ARCH }}" #${GITHUB_SHA::7}-${{ matrix.format }}-${{ env.ARCH }}"
+          MANIFEST_NAME="${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.SUBREPOSITORY }}${{ env.IMAGE }}:${GITHUB_SHA::7}-${{ matrix.format }}-${{ env.ARCH }}"
 
           podman manifest create "${MANIFEST_NAME}"
 
