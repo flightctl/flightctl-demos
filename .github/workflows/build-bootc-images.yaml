@@ -239,7 +239,7 @@ jobs:
           podman manifest create "${MANIFEST_NAME}"
 
           podman manifest add \
-            --artifact --artifact-type application/vnd.diskimage.${{ matrix.format }}.gzip \
+            --artifact --artifact-type "application/vnd.diskimage.${{ matrix.format }}+gzip" \
             --arch=${{ env.ARCH }} --os=linux \
             "${MANIFEST_NAME}" "${DISK_IMAGE}.gz"
 
