@@ -6,3 +6,5 @@ RUN dnf -y copr enable @redhat-et/flightctl && \
     systemctl enable flightctl-agent.service
 
 # ADD config.yaml /etc/flightctl/
+
+RUN bootc container lint
