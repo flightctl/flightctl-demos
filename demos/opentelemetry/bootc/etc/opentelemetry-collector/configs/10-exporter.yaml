@@ -1,0 +1,18 @@
+---
+receivers:
+  otlp:
+    protocols:
+      grpc:
+      http:
+
+service:
+  pipelines:
+    logs:
+      receivers: [journald]
+      exporters: [debug]
+    metrics:
+      receivers: [hostmetrics, hostmetrics/disk]
+      exporters: [debug]
+    traces:
+      receivers: [otlp]
+      exporters: [debug]
