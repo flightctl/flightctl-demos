@@ -33,7 +33,8 @@ exporters:
       ca_file: /etc/opentelemetry-collector/certs/ca.crt
       cert_file: /etc/opentelemetry-collector/certs/client.crt
       key_file: /etc/opentelemetry-collector/certs/client.key
-  debug: {}
+  debug:
+    verbosity: detailed
 
 processors:
   batch: {}
