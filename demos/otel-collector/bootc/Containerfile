@@ -11,8 +11,10 @@ RUN systemctl enable opentelemetry-collector-rhde.service
 RUN /usr/bin/getent group rhde-observability > /dev/null || /usr/sbin/groupadd -r rhde-observability && \
     /usr/bin/getent passwd rhde-observability > /dev/null || /usr/sbin/useradd -r -M -s /sbin/nologin -g rhde-observability -G systemd-journal rhde-observability
 
-RUN mkdir -p /etc/opentelemetry-collector-rhde/ca && \
-    awk '/certificate-authority-data:/ {print $2}' /etc/flightctl/config.yaml | base64 -d > /etc/opentelemetry-collector-rhde/ca/ca.crt
+## ----------------- IMPORTANT -----------------
+## We need to add certs (ca.crt, client.crt & client.key) to the local directory etc/opentelemetry-collector-rhde/certs
+## Also we need to add the FlightCTL config.yaml to the local directory etc/flighctl/config.yaml
+## ---------------------------------------------
 
 RUN rm -rf /opt && ln -s /var /opt
 RUN [ ! -L /var/run ] && [ -d /var/run ] && rm -rf /var/run && ln -s /run /var/ || ln -s /run /var/run
