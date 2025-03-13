@@ -6,12 +6,12 @@ RUN dnf install -y opentelemetry-collector
 
 RUN systemctl enable opentelemetry-collector.service
 
-RUN cat /etc/opentelemetry-collector/configs/*
-
 ## ----------------- IMPORTANT -----------------
-## We need to add certs (ca.crt, client.crt & client.key) to the local directory etc/opentelemetry-collector-rhde/certs
+## We need to add certs (ca.crt, client.crt & client.key) to the local directory etc/opentelemetry-collector/certs
 ## Also we need to add the FlightCTL config.yaml to the local directory etc/flighctl/config.yaml
 ## ---------------------------------------------
+
+RUN chown -R observability:observability /etc/opentelemetry-collector
 
 RUN rm -rf /opt && ln -s /var /opt
 RUN [ ! -L /var/run ] && [ -d /var/run ] && rm -rf /var/run && ln -s /run /var/ || ln -s /run /var/run
