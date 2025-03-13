@@ -1,0 +1,55 @@
+apiVersion: opentelemetry.io/v1beta1
+kind: OpenTelemetryCollector
+metadata:
+  name: otel
+  namespace: flightctl-observability
+spec:
+  mode: deployment
+  replicas: 1
+  ingress:
+    type: route
+    route:
+      termination: passthrough
+  volumes:
+    - name: receiver-ca
+      configMap:
+        name: otelcol-receiver-ca
+    - name: receiver-certs
+      secret:
+        secretName: otelcol-receiver-certs
+  volumeMounts:
+    - name: receiver-ca
+      mountPath: /etc/opentelemetry-collector-rhde/ca
+    - name: receiver-certs
+      mountPath: /etc/opentelemetry-collector-rhde/certs
+  config:
+    exporters:
+      debug:
+        verbosity: normal
+      otlphttp/coo:
+        endpoint: http://flightctl-monitoring-stack-prometheus:9090/api/v1/otlp/
+    receivers:
+      otlp:
+        protocols:
+          http:
+            endpoint: 0.0.0.0:4318
+            tls:
+              client_ca_file: /etc/opentelemetry-collector-rhde/ca/ca.crt
+              cert_file: /etc/opentelemetry-collector-rhde/certs/tls.crt
+              key_file: /etc/opentelemetry-collector-rhde/certs/tls.key
+    service:
+      pipelines:
+        traces:
+          receivers:
+            - otlp
+          exporters:
+            - debug
+        metrics:
+          receivers:
+            - otlp
+          exporters:
+            - debug
+            - otlphttp/coo
+      telemetry:
+        metrics:
+          address: 0.0.0.0:8888
