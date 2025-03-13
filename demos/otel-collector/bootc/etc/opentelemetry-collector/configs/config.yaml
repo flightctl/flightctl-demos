@@ -26,20 +26,22 @@ receivers:
       filesystem:
       
 exporters:
- otlphttp:
+  otlphttp:
     endpoint: https://otlp-http-otel-route-flightctl-observability.apps.demo.ecoeng-flightctl.devcluster.openshift.com
     tls:
       insecure: false
       ca_file: /etc/opentelemetry-collector/certs/ca.crt
       cert_file: /etc/opentelemetry-collector/certs/client.crt
       key_file: /etc/opentelemetry-collector/certs/client.key
+  debug: {}
+
 processors:
   batch: {}
-  attributes:
-    actions:
-      - action: insert
-        key: device
-        value: device001
+  resource:
+    attributes:
+    - action: insert
+      key: device
+      value: device001
   memory_limiter:
     check_interval: 10s
     limit_percentage: 5
@@ -49,5 +51,5 @@ service:
   pipelines:
     metrics:
       receivers: [hostmetrics,hostmetrics/disk]
-      processors: [batch, memory_limiter, attributes]
-      exporters: [otlphttp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [debug, otlphttp]
