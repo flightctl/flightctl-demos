@@ -2,19 +2,19 @@ QUAYUSER ?= $(shell echo $(USER))
 
 bootc-fedora:
 	@echo "Building Fedora FlightCtl Agent bootc image..."
-	sudo podman build -t quay.io/${QUAYUSER}/flightctl-agent-fedora:latest -f images/bootc/fedora-bootc/Containerfile images/bootc/fedora-bootc/
+	sudo podman build -t quay.io/${QUAYUSER}/flightctl-agent-fedora:latest -f fedora-bootc/bootc/Containerfile.amd64 fedora-bootc/bootc/
 	sudo podman push quay.io/${QUAYUSER}/flightctl-agent-fedora:latest
 
 bootc-centos:
 	@echo "Building Fedora FlightCtl Agent bootc image..."
 	@echo "Requires RH's VPN"
-	sudo podman build -t quay.io/${QUAYUSER}/flightctl-agent-centos:latest -f images/bootc/centos-bootc/Containerfile images/bootc/centos-bootc/
+	sudo podman build -t quay.io/${QUAYUSER}/flightctl-agent-centos:latest -f centos-bootc/bootc/Containerfile.amd64 centos-bootc/bootc/
 	sudo podman push quay.io/${QUAYUSER}/flightctl-agent-centos:latest
 
 bootc-rhel:
 	@echo "Building RHEL9 FlightCtl Agent bootc image..."
 	@echo "Requires RH's VPN"
-	sudo podman build -t quay.io/${QUAYUSER}/flightctl-agent-rhel:latest -f images/bootc/rhel-bootc/Containerfile images/bootc/rhel-bootc/
+	sudo podman build -t quay.io/${QUAYUSER}/flightctl-agent-rhel:latest -f rhel-bootc/bootc/Containerfile.amd64 rhel-bootc/bootc/
 	sudo podman push quay.io/${QUAYUSER}/flightctl-agent-rhel:latest
 
 basic-nginx:
@@ -28,6 +28,23 @@ extra-rhel:
 	sudo podman pull quay.io/${QUAYUSER}/flightctl-agent-rhel:latest
 	sudo podman build -t quay.io/${QUAYUSER}/flightctl-agent-extra-rhel:latest -f demos/basic-extra-rhel/bootc/Containerfile demos/basic-extra-rhel/bootc/
 	sudo podman push quay.io/${QUAYUSER}/flightctl-agent-extra-rhel:latest
+
+otel-collector-centos:
+	@echo "Building otel-collector image..."
+	sudo podman build -t quay.io/${QUAYUSER}/otel-collector-centos:latest -f demos/otel-collector/bootc/Containerfile demos/otel-collector/bootc/
+	sudo podman push quay.io/${QUAYUSER}/otel-collector-centos:latest
+
+qcow2-otel-collector-centos:
+	@echo "Building FlightCtl Agent with otel-collector qcow2 image..."
+	mkdir -p output
+	sudo podman run --rm -it --privileged --pull=newer \
+        --security-opt label=type:unconfined_t \
+		-v $(PWD)/config.json:/config.json \
+        -v $(PWD)/output:/output \
+		-v /var/lib/containers/storage:/var/lib/containers/storage \
+        quay.io/centos-bootc/bootc-image-builder:latest \
+		--config /config.json \
+        quay.io/$(QUAYUSER)/otel-collector-centos:latest
 
 qcow2-bootc:
 	@echo "Building FlightCtl Agent qcow2 image..."

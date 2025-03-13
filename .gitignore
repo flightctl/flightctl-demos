@@ -2,3 +2,5 @@
 *.key
 /output
 config.json
+config.yaml
+!otel-collector/bootc/etc/opentelemetry-collector-rhde/config.yaml

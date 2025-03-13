@@ -1,0 +1,18 @@
+FROM quay.io/flightctl-demos/centos-bootc:latest
+
+ADD etc etc
+
+RUN dnf install -y opentelemetry-collector
+
+ADD opentelemetry-collector-rhde.service /usr/lib/systemd/system/
+
+RUN systemctl enable opentelemetry-collector-rhde.service
+
+RUN /usr/bin/getent group rhde-observability > /dev/null || /usr/sbin/groupadd -r rhde-observability && \
+    /usr/bin/getent passwd rhde-observability > /dev/null || /usr/sbin/useradd -r -M -s /sbin/nologin -g rhde-observability -G systemd-journal rhde-observability
+
+RUN mkdir -p /etc/opentelemetry-collector-rhde/ca && \
+    awk '/certificate-authority-data:/ {print $2}' /etc/flightctl/config.yaml | base64 -d > /etc/opentelemetry-collector-rhde/ca/ca.crt
+
+RUN rm -rf /opt && ln -s /var /opt
+RUN [ ! -L /var/run ] && [ -d /var/run ] && rm -rf /var/run && ln -s /run /var/ || ln -s /run /var/run
