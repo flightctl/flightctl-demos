@@ -31,8 +31,8 @@ extra-rhel:
 
 otel-collector-centos:
 	@echo "Building otel-collector image..."
-	sudo podman build -t quay.io/${QUAYUSER}/otel-collector-centos:latest -f demos/otel-collector/bootc/Containerfile demos/otel-collector/bootc/
-	sudo podman push quay.io/${QUAYUSER}/otel-collector-centos:latest
+	sudo podman build -t quay.io/${QUAYUSER}/otel-collector-centos:5 -f demos/otel-collector/bootc/Containerfile demos/otel-collector/bootc/
+	#sudo podman push quay.io/${QUAYUSER}/otel-collector-centos:latest
 
 qcow2-otel-collector-centos:
 	@echo "Building FlightCtl Agent with otel-collector qcow2 image..."
@@ -44,7 +44,7 @@ qcow2-otel-collector-centos:
 		-v /var/lib/containers/storage:/var/lib/containers/storage \
         quay.io/centos-bootc/bootc-image-builder:latest \
 		--config /config.json \
-        quay.io/$(QUAYUSER)/otel-collector-centos:latest
+        quay.io/$(QUAYUSER)/otel-collector-centos:5
 
 qcow2-bootc:
 	@echo "Building FlightCtl Agent qcow2 image..."
