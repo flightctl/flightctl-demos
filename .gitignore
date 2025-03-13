@@ -3,4 +3,4 @@
 /output
 config.json
 config.yaml
-!demos/otel-collector/bootc/etc/opentelemetry-collector-rhde/config.yaml
+!demos/otel-collector/bootc/etc/opentelemetry-collector/config.yaml
