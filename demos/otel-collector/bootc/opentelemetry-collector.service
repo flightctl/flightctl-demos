@@ -1,0 +1,14 @@
+[Unit]
+Description=RHDE Observability Agent
+After=network.target
+
+[Service]
+Type=simple
+User=observability
+Group=observability
+Restart=on-failure
+RestartSec=30
+ExecStart=/bin/bash -c "DEVICE_ID=$(jq -r '.metadata.name' /var/lib/flightctl/current.json 2>/dev/null); if [[ -n \"$DEVICE_ID\" && \"$DEVICE_ID\" != 'null' ]]; then echo 'Found metadata.name: '$DEVICE_ID; export DEVICE_ID; exec /usr/bin/opentelemetry-collector-with-options; else echo 'device name not found, retrying in 30 seconds...'; exit 1; fi"
+
+[Install]
+WantedBy=multi-user.target

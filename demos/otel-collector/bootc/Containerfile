@@ -4,6 +4,8 @@ ADD etc etc
 
 RUN dnf install -y opentelemetry-collector
 
+ADD opentelemetry-collector.service /usr/lib/systemd/system/
+
 RUN systemctl enable opentelemetry-collector.service
 
 ## ----------------- IMPORTANT -----------------

@@ -51,11 +51,11 @@ processors:
     attributes:
     - action: insert
       key: host.id
-      value: device001
+      value: "${DEVICE_ID}"
   attributes:
     - action: insert
       key: host.id
-      value: device001
+      value: "${DEVICE_ID}"
   memory_limiter:
     check_interval: 10s
     limit_percentage: 5
