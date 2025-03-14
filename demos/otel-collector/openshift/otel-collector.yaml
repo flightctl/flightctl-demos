@@ -23,11 +23,48 @@ spec:
     - name: receiver-certs
       mountPath: /etc/opentelemetry-collector-rhde/certs
   config:
+    extensions:
+      bearertokenauth:
+        filename: "/var/run/secrets/kubernetes.io/serviceaccount/token"
     exporters:
       debug:
         verbosity: normal
       otlphttp/coo:
         endpoint: http://flightctl-monitoring-stack-prometheus:9090/api/v1/otlp/
+      otlphttp/loki:
+        endpoint: https://logging-loki-gateway-http.openshift-logging.svc.cluster.local:8080/api/logs/v1/application/otlp
+        encoding: json
+        tls:
+          ca_file: "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt"
+        auth:
+          authenticator: bearertokenauth
+    processors:
+      # Needed for Loki and UI plugin
+      resource/loki:
+        attributes:
+          - key:  kubernetes.namespace_name
+            from_attribute: k8s.namespace.name
+            action: upsert
+          - key:  kubernetes.pod_name
+            from_attribute: k8s.pod.name
+            action: upsert
+          - key: kubernetes.container_name
+            from_attribute: k8s.container.name
+            action: upsert
+          - key: log_type
+            value: application
+            action: upsert
+      # Needed for Loki and UI plugin
+      transform/loki:
+        log_statements:
+          - context: log
+            statements:
+              - set(attributes["level"], ConvertCase(severity_text, "lower"))
+          - context: log
+            statements:
+              #               message is used by the OCP console to render the message. If the message is not there it shows the entire payload
+              #               however this sets the message as an attribute which is not recognized by the console
+              - set(attributes["message"], body)
     receivers:
       otlp:
         protocols:
@@ -38,18 +75,58 @@ spec:
               cert_file: /etc/opentelemetry-collector-rhde/certs/tls.crt
               key_file: /etc/opentelemetry-collector-rhde/certs/tls.key
     service:
+      extensions: [bearertokenauth]
       pipelines:
         logs:
           receivers:
             - otlp
+          processors:
+            - resource/loki
+            - transform/loki
           exporters:
             - debug
+            - otlphttp/loki
         metrics:
           receivers:
             - otlp
           exporters:
-            - debug
+#            - debug
             - otlphttp/coo
       telemetry:
         metrics:
           address: 0.0.0.0:8888
+---
+### RBAC for sending logs to Loki
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: otel-collector-logs-writer
+rules:
+  - apiGroups:
+      - loki.grafana.com
+    resourceNames:
+      - logs
+    resources:
+      - application
+    verbs:
+      - create
+  - apiGroups: [""]
+    resources: ["pods", "namespaces", "nodes"]
+    verbs: ["get", "watch", "list"]
+  - apiGroups: ["apps"]
+    resources: ["replicasets"]
+    verbs: ["get", "list", "watch"]
+---
+### RBAC for sending logs to Loki
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: otel-collector-logs-writer
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: otel-collector-logs-writer
+subjects:
+  - kind: ServiceAccount
+    name: otel-collector
+    namespace: flightctl-observability
