@@ -45,6 +45,7 @@ processors:
   batch: {}
   # The prometheus OTLP ingestion does not add resource attributes by default
   # See coo-prometheus.yaml how to enable ingestion of resource attributes
+  # See https://opentelemetry.io/docs/specs/semconv/resource/device/ which attributes are expected
   resource:
     attributes:
     - action: insert
