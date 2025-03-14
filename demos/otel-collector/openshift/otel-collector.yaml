@@ -39,7 +39,7 @@ spec:
               key_file: /etc/opentelemetry-collector-rhde/certs/tls.key
     service:
       pipelines:
-        traces:
+        logs:
           receivers:
             - otlp
           exporters:

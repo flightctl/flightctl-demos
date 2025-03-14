@@ -24,6 +24,11 @@ receivers:
     scrapers:
       disk:
       filesystem:
+
+  journald:
+    units:
+      - flightctl-agent.service
+    priority: info
       
 exporters:
   otlphttp:
@@ -52,5 +57,9 @@ service:
   pipelines:
     metrics:
       receivers: [hostmetrics,hostmetrics/disk]
+      processors: [memory_limiter, resource, batch]
+      exporters: [debug, otlphttp]
+    logs:
+      receivers: [journald]
       processors: [memory_limiter, resource, batch]
       exporters: [debug, otlphttp]
