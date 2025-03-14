@@ -43,10 +43,18 @@ exporters:
 
 processors:
   batch: {}
+  # The prometheus OTLP ingestion does not add resource attributes by default
+  # See coo-prometheus.yaml how to enable ingestion of resource attributes
+  # See https://opentelemetry.io/docs/specs/semconv/resource/device/ which attributes are expected
+  # See https://opentelemetry.io/docs/specs/semconv/resource/host/ which attributes are expected
   resource:
     attributes:
     - action: insert
-      key: device
+      key: host.id
+      value: device001
+  attributes:
+    - action: insert
+      key: host.id
       value: device001
   memory_limiter:
     check_interval: 10s
