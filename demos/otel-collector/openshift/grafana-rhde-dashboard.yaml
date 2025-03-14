@@ -113,7 +113,7 @@ data:
               },
               "disableTextWrap": false,
               "editorMode": "builder",
-              "expr": "system_disk_io_time_seconds_total",
+              "expr": "system_disk_io_time_seconds_total{host_id=\"$host_id\"}",
               "fullMetaSearch": false,
               "includeNullMetadata": true,
               "instant": false,
@@ -212,7 +212,7 @@ data:
               },
               "disableTextWrap": false,
               "editorMode": "builder",
-              "expr": "process_memory_utilization_ratio",
+              "expr": "process_memory_utilization_ratio{host_id=\"$host_id\"}",
               "fullMetaSearch": false,
               "includeNullMetadata": true,
               "instant": false,
@@ -311,7 +311,7 @@ data:
               },
               "disableTextWrap": false,
               "editorMode": "builder",
-              "expr": "process_cpu_time_seconds_total",
+              "expr": "process_cpu_time_seconds_total{host_id=\"$host_id\"}",
               "fullMetaSearch": false,
               "includeNullMetadata": true,
               "instant": false,
@@ -328,7 +328,32 @@ data:
       "schemaVersion": 39,
       "tags": [],
       "templating": {
-        "list": []
+        "list": [
+          {
+            "current": {
+              "selected": false,
+              "text": "1omqqvr00lij1gqodu1og2m0316vu7qivdqbmb4tcfb56j6efkrg",
+              "value": "1omqqvr00lij1gqodu1og2m0316vu7qivdqbmb4tcfb56j6efkrg"
+            },
+            "definition": "label_values(process_cpu_time_seconds_total,host_id)",
+            "hide": 0,
+            "includeAll": false,
+            "label": "host_id",
+            "multi": false,
+            "name": "host_id",
+            "options": [],
+            "query": {
+              "qryType": 1,
+              "query": "label_values(process_cpu_time_seconds_total,host_id)",
+              "refId": "PrometheusVariableQueryEditor-VariableQuery"
+            },
+            "refresh": 1,
+            "regex": "",
+            "skipUrlSync": false,
+            "sort": 0,
+            "type": "query"
+          }
+        ]
       },
       "time": {
         "from": "now-6h",
@@ -338,7 +363,7 @@ data:
       "timezone": "browser",
       "title": "RHDE",
       "uid": "defqanmnen7k0a",
-      "version": 2,
+      "version": 6,
       "weekStart": ""
     }
 ---
