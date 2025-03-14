@@ -7,4 +7,16 @@ metadata:
 spec:
   otlp:
     promoteResourceAttributes:
-      - device
+      - device.id
+      - device.manufacturer
+      - device.model.identifier
+      - device.model.name
+      - host.id
+      - host.arch
+      - host.image.id
+      - host.image.name
+      - host.image.version
+      - host.name
+      - host.type
+      - host.ip
+      - host.mac
