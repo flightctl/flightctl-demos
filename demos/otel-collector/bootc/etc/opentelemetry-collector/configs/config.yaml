@@ -43,8 +43,14 @@ exporters:
 
 processors:
   batch: {}
+  # The prometheus OTLP ingestion does not add resource attributes by default
+  # See coo-prometheus.yaml how to enable ingestion of resource attributes
   resource:
     attributes:
+    - action: insert
+      key: device
+      value: device001
+  attributes:
     - action: insert
       key: device
       value: device001

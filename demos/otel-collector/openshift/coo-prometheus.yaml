@@ -1,0 +1,10 @@
+# Apply this manifest once the coo-monitoring-stack is deployed.
+#  kubectl apply -f demos/otel-collector/openshift/coo-prometheus.yaml --server-side
+apiVersion: monitoring.rhobs/v1
+kind: Prometheus
+metadata:
+  name: flightctl-monitoring-stack
+spec:
+  otlp:
+    promoteResourceAttributes:
+      - device
