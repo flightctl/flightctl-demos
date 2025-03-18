@@ -31,7 +31,7 @@ spec:
         verbosity: normal
       otlphttp/coo:
         endpoint: http://flightctl-monitoring-stack-prometheus:9090/api/v1/otlp/
-      otlp/mco:
+      otlp/acm:
         endpoint: https://otel-collector-headless.open-cluster-management-observability.svc.cluster.local:4317
         tls:
           insecure: false
@@ -97,7 +97,7 @@ spec:
           exporters:
 #            - debug
             - otlphttp/coo
-            - otlp/mco
+            - otlp/acm
       telemetry:
         metrics:
           address: 0.0.0.0:8888
