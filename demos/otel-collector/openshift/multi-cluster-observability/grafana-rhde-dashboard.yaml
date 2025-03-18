@@ -112,7 +112,7 @@ data:
               "datasource": "$datasource",
               "disableTextWrap": false,
               "editorMode": "builder",
-              "expr": "system_disk_io_time_seconds_total{}",
+              "expr": "system_disk_io_time_seconds_total{host_id=~\"$host_id\"}",
               "fullMetaSearch": false,
               "includeNullMetadata": true,
               "instant": false,
@@ -205,7 +205,7 @@ data:
               "datasource": "$datasource",
               "disableTextWrap": false,
               "editorMode": "builder",
-              "expr": "process_memory_utilization_ratio{}",
+              "expr": "process_memory_utilization_ratio{host_id=~\"$host_id\"}",
               "fullMetaSearch": false,
               "includeNullMetadata": true,
               "instant": false,
@@ -298,7 +298,7 @@ data:
               "datasource": "$datasource",
               "disableTextWrap": false,
               "editorMode": "builder",
-              "expr": "process_cpu_time_seconds_total{}",
+              "expr": "process_cpu_time_seconds_total{host_id=~\"$host_id\"}",
               "fullMetaSearch": false,
               "includeNullMetadata": true,
               "instant": false,
@@ -314,6 +314,60 @@ data:
       ],
       "schemaVersion": 39,
       "tags": [],
+      "templating": {
+        "list": [
+          {
+            "current": {
+              "selected": false,
+              "text": "",
+              "value": ""
+            },
+            "description": null,
+            "error": null,
+            "hide": 2,
+            "includeAll": false,
+            "label": null,
+            "multi": false,
+            "name": "datasource",
+            "options": [],
+            "query": "prometheus",
+            "refresh": 2,
+            "regex": "",
+            "skipUrlSync": false,
+            "type": "datasource"
+          },
+          {
+            "allValue": null,
+            "current": {
+              "selected": false,
+              "text": "",
+              "value": ""
+            },
+            "datasource": "$datasource",
+            "definition": "label_values(process_cpu_time_seconds_total,host_id)",
+            "description": null,
+            "error": null,
+            "hide": 0,
+            "includeAll": false,
+            "label": null,
+            "multi": false,
+            "name": "host_id",
+            "options": [],
+            "query": {
+              "query": "label_values(process_cpu_time_seconds_total,host_id)",
+              "refId": "Observatorium-hostid"
+            },
+            "refresh": 2,
+            "regex": "",
+            "skipUrlSync": false,
+            "sort": 1,
+            "tagValuesQuery": "",
+            "tagsQuery": "",
+            "type": "query",
+            "useTags": false
+          }
+        ]
+      },
       "time": {
         "from": "now-6h",
         "to": "now"
