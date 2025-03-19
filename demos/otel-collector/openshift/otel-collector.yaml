@@ -31,6 +31,11 @@ spec:
         verbosity: normal
       otlphttp/coo:
         endpoint: http://flightctl-monitoring-stack-prometheus:9090/api/v1/otlp/
+      otlp/acm:
+        endpoint: https://otel-collector-headless.open-cluster-management-observability.svc.cluster.local:4317
+        tls:
+          insecure: false
+          ca_file: "/var/run/secrets/kubernetes.io/serviceaccount/service-ca.crt"
       otlphttp/loki:
         endpoint: https://logging-loki-gateway-http.openshift-logging.svc.cluster.local:8080/api/logs/v1/application/otlp
         encoding: json
@@ -92,6 +97,7 @@ spec:
           exporters:
 #            - debug
             - otlphttp/coo
+            - otlp/acm
       telemetry:
         metrics:
           address: 0.0.0.0:8888
