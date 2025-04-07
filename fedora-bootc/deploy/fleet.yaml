@@ -1,0 +1,15 @@
+apiVersion: flightctl.io/v1alpha1
+kind: Fleet
+metadata:
+  name: fedora-bootc
+spec:
+  selector:
+    matchLabels:
+      fleet: fedora-bootc
+  template:
+    metadata:
+      labels:
+        fleet: fedora-bootc
+    spec:
+      os:
+        image: quay.io/flightctl-demos/fedora-bootc:latest

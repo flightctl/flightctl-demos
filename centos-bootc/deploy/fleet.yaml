@@ -1,0 +1,15 @@
+apiVersion: flightctl.io/v1alpha1
+kind: Fleet
+metadata:
+  name: centos-bootc
+spec:
+  selector:
+    matchLabels:
+      fleet: centos-bootc
+  template:
+    metadata:
+      labels:
+        fleet: centos-bootc
+    spec:
+      os:
+        image: quay.io/flightctl-demos/centos-bootc:latest
