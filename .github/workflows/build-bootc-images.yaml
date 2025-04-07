@@ -13,6 +13,10 @@ on:
     paths:
       - '*/bootc'
 
+env:
+  REGISTRY: quay.io
+  REPOSITORY: flightctl-demos
+
 jobs:
   find-changed-bootc-images:
     runs-on: ubuntu-24.04
@@ -56,6 +60,7 @@ jobs:
     needs: [find-changed-bootc-images]
 
     if: ${{ needs.find-changed-bootc-images.outputs.images != '[]' }}
+
     strategy:
       matrix:
         image: ${{ fromJSON(needs.find-changed-bootc-images.outputs.images) }}
@@ -73,8 +78,6 @@ jobs:
       options: --privileged
 
     env:
-      REGISTRY: quay.io
-      REPOSITORY: flightctl-demos
       IMAGE: ${{ matrix.image }}
       ARCH: ${{ (matrix.runner == 'ubuntu-24.04-arm') && 'arm64' || 'amd64' }}
 
@@ -82,7 +85,7 @@ jobs:
       - name: Clone the repository
         uses: actions/checkout@v4
 
-      - name: Install Podman 5 andcontainer tools and configure them to attach Sigstore signatures
+      - name: Install Podman 5 and container tools and configure them to attach Sigstore signatures
         run: |
           dnf -y install podman
           tee "/etc/containers/registries.d/${{ env.REGISTRY }}.yaml" > /dev/null <<EOF
@@ -114,6 +117,7 @@ jobs:
     needs: [find-changed-bootc-images,build-bootc-images]
 
     if: ${{ needs.find-changed-bootc-images.outputs.images != '[]' }}
+
     strategy:
       matrix:
         image: ${{ fromJSON(needs.find-changed-bootc-images.outputs.images) }}
@@ -127,8 +131,6 @@ jobs:
       options: --privileged
 
     env:
-      REGISTRY: quay.io
-      REPOSITORY: flightctl-demos
       IMAGE: ${{ matrix.image }}
 
     steps:
@@ -175,6 +177,7 @@ jobs:
     needs: [find-changed-bootc-images,build-bootc-images]
 
     if: ${{ needs.find-changed-bootc-images.outputs.images != '[]' }}
+
     strategy:
       matrix:
         image: ${{ fromJSON(needs.find-changed-bootc-images.outputs.images) }}
@@ -186,8 +189,6 @@ jobs:
     runs-on: ${{ matrix.runner }}
 
     env:
-      REGISTRY: quay.io
-      REPOSITORY: flightctl-demos
       SUBREPOSITORY: install/
       IMAGE: ${{ matrix.image }}
       ARCH: ${{ (matrix.runner == 'ubuntu-24.04-arm') && 'arm64' || 'amd64' }}
