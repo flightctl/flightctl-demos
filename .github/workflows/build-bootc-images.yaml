@@ -14,8 +14,8 @@ on:
       - '*/bootc'
 
 env:
-  REGISTRY: quay.io
-  REPOSITORY: flightctl-demos
+  OCI_REGISTRY: quay.io
+  OCI_ORG: flightctl-demos
 
 jobs:
   find-changed-bootc-images:
@@ -78,8 +78,9 @@ jobs:
       options: --privileged
 
     env:
-      IMAGE: ${{ matrix.image }}
       ARCH: ${{ (matrix.runner == 'ubuntu-24.04-arm') && 'arm64' || 'amd64' }}
+      OCI_IMAGE: ${{ env.OCI_REGISTRY }}/${{ env.OCI_ORG }}/${{ matrix.image }}
+      OCI_IMAGE_TAG: ${GITHUB_SHA::8}-${{ env.ARCH }}
 
     steps:
       - name: Clone the repository
@@ -88,29 +89,25 @@ jobs:
       - name: Install Podman 5 and container tools and configure them to attach Sigstore signatures
         run: |
           dnf -y install podman
-          tee "/etc/containers/registries.d/${{ env.REGISTRY }}.yaml" > /dev/null <<EOF
+          tee "/etc/containers/registries.d/${{ env.OCI_REGISTRY }}.yaml" > /dev/null <<EOF
             docker:
-              ${{ env.REGISTRY }}:
+              ${{ env.OCI_REGISTRY }}:
                 use-sigstore-attachments: true
           EOF
 
       - name: Log in to OCI registry
-        run: podman login -u '${{ secrets.QUAY_PUBLISHER_USERNAME }}' -p '${{ secrets.QUAY_PUBLISHER_PASSWORD }}' ${{ env.REGISTRY }}
+        run: podman login -u '${{ secrets.QUAY_PUBLISHER_USERNAME }}' -p '${{ secrets.QUAY_PUBLISHER_PASSWORD }}' ${{ env.OCI_REGISTRY }}
 
       - name: Build bootc image
         run: |
           pushd ${IMAGE}/bootc
-          podman build \
-            -t ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::8}-${{ env.ARCH }} \
-            -f Containerfile.${{ env.ARCH }} .
+          podman build -t ${{ env.OCI_IMAGE }}:${{ env.OCI_IMAGE_TAG }} -f Containerfile.${{ env.ARCH }} .
           popd
 
       - name: Push image to registry and sign it
         run: |
           printf '%s' '${{ secrets.SIGNING_KEY_PRIVATE }}' > ./signingkey.private
-          podman push \
-            --sign-by-sigstore-private-key ./signingkey.private \
-            ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::8}-${{ env.ARCH }}
+          podman push --sign-by-sigstore-private-key ./signingkey.private ${{ env.OCI_IMAGE }}:${{ env.OCI_IMAGE_TAG }}
 
 
   build-bootc-manifestlist:
@@ -131,28 +128,30 @@ jobs:
       options: --privileged
 
     env:
-      IMAGE: ${{ matrix.image }}
+      ARCH: ${{ (matrix.runner == 'ubuntu-24.04-arm') && 'arm64' || 'amd64' }}
+      OCI_IMAGE: ${{ env.OCI_REGISTRY }}/${{ env.OCI_ORG }}/${{ matrix.image }}
+      OCI_IMAGE_TAG: ${GITHUB_SHA::8}
 
     steps:
       - name: Install container tools and configure them to attach Sigstore signatures
         run: |
           dnf -y install podman
-          tee "/etc/containers/registries.d/${{ env.REGISTRY }}.yaml" > /dev/null <<EOF
+          tee "/etc/containers/registries.d/${{ env.OCI_REGISTRY }}.yaml" > /dev/null <<EOF
             docker:
-              ${{ env.REGISTRY }}:
+              ${{ env.OCI_REGISTRY }}:
                 use-sigstore-attachments: true
           EOF
 
       - name: Log in to OCI registry
-        run: podman login -u '${{ secrets.QUAY_PUBLISHER_USERNAME }}' -p '${{ secrets.QUAY_PUBLISHER_PASSWORD }}' ${{ env.REGISTRY }}
+        run: podman login -u '${{ secrets.QUAY_PUBLISHER_USERNAME }}' -p '${{ secrets.QUAY_PUBLISHER_PASSWORD }}' ${{ env.OCI_REGISTRY }}
 
       - name: Create manifest list
         run: |
-          podman manifest create ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::8}
+          podman manifest create ${{ env.OCI_IMAGE }}:${{ env.OCI_IMAGE_TAG }}
           for arch in amd64 arm64; do
             podman manifest add \
-              ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::8} \
-              docker://${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::8}-${arch}
+              ${{ env.OCI_IMAGE }}:${{ env.OCI_IMAGE_TAG }} \
+              docker://${{ env.OCI_IMAGE }}:${{ env.OCI_IMAGE_TAG }}-${arch}
           done
 
       - name: Push manifest list to registry and sign it
@@ -160,8 +159,8 @@ jobs:
           printf '%s' '${{ secrets.SIGNING_KEY_PRIVATE }}' > ./signingkey.private
           podman manifest push --all \
             --sign-by-sigstore-private-key ./signingkey.private \
-            ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::8} \
-            docker://${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::8}
+            ${{ env.OCI_IMAGE }}:${{ env.OCI_IMAGE_TAG }} \
+            docker://${{ env.OCI_IMAGE }}:${{ env.OCI_IMAGE_TAG }}
 
 
   build-bootc-disk-images:
@@ -173,16 +172,18 @@ jobs:
       matrix:
         image: ${{ fromJSON(needs.find-changed-bootc-images.outputs.images) }}
         runner: ["ubuntu-24.04","ubuntu-24.04-arm"]
-        format: [qcow2, raw]
+        format: [iso, qcow2, raw]
       max-parallel: 4
       fail-fast: false
 
     runs-on: ${{ matrix.runner }}
 
     env:
-      SUBREPOSITORY: install/
-      IMAGE: ${{ matrix.image }}
       ARCH: ${{ (matrix.runner == 'ubuntu-24.04-arm') && 'arm64' || 'amd64' }}
+      OCI_IMAGE: ${{ env.OCI_REGISTRY }}/${{ env.OCI_ORG }}/${{ matrix.image }}
+      OCI_IMAGE_TAG: ${GITHUB_SHA::8}-${{ env.ARCH }}
+      OCI_DISK_IMAGE: ${{ env.OCI_REGISTRY }}/${{ env.OCI_ORG }}/${{ matrix.image }}/diskimage-${{ matrix.format }}
+      OCI_DISK_IMAGE_TAG: ${GITHUB_SHA::8}-${{ env.ARCH }}
 
     steps:
       - name: Clone the repository
@@ -192,15 +193,13 @@ jobs:
         uses: ./.github/actions/setup-podman5
 
       - name: Log in to OCI registry
-        run: podman login -u '${{ secrets.QUAY_PUBLISHER_USERNAME }}' -p '${{ secrets.QUAY_PUBLISHER_PASSWORD }}' ${{ env.REGISTRY }}
+        run: podman login -u '${{ secrets.QUAY_PUBLISHER_USERNAME }}' -p '${{ secrets.QUAY_PUBLISHER_PASSWORD }}' ${{ env.OCI_REGISTRY }}
 
       - name: Build disk image
         run: |
           mkdir -p "${GITHUB_WORKSPACE}/output"
 
-          BOOTC_IMAGE="${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::8}-${{ env.ARCH }}"
-
-          sudo podman pull "${BOOTC_IMAGE}"
+          sudo podman pull "${{ env.OCI_IMAGE }}:${{ env.OCI_IMAGE_TAG }}"
 
           sudo podman run --rm -it --privileged --pull=newer \
             --security-opt label=type:unconfined_t \
@@ -209,28 +208,27 @@ jobs:
             quay.io/centos-bootc/bootc-image-builder:latest \
               --target-arch ${{ env.ARCH }} \
               --type ${{ matrix.format }} \
-              "${BOOTC_IMAGE}"
+              "${{ env.OCI_IMAGE }}:${{ env.OCI_IMAGE_TAG }}"
 
           sudo chown -R $(whoami):$(whoami) "${GITHUB_WORKSPACE}/output"
 
           case ${{ matrix.format }} in
-            raw)   echo "DISK_IMAGE=output/image/disk.raw" >> $GITHUB_ENV;;
-            qcow2) echo "DISK_IMAGE=output/qcow2/disk.qcow2" >> $GITHUB_ENV;;
+            raw)   echo "DISK_IMAGE_FILE=output/image/disk.raw" >> $GITHUB_ENV;;
+            qcow2) echo "DISK_IMAGE_FILE=output/qcow2/disk.qcow2" >> $GITHUB_ENV;;
           esac
 
-      - name: Push compressed disk image to registry and sign it
+      - name: Push disk image to registry and sign it
         run: |
           printf '%s' '${{ secrets.SIGNING_KEY_PRIVATE }}' > ./signingkey.private
 
-          MANIFEST_NAME="${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.SUBREPOSITORY }}${{ env.IMAGE }}:${GITHUB_SHA::8}-${{ matrix.format }}-${{ env.ARCH }}"
-
-          podman manifest create "${MANIFEST_NAME}"
+          podman manifest create "${{ env.OCI_DISK_IMAGE }}:${{ env.OCI_DISK_IMAGE_TAG }}"
 
           podman manifest add \
-            --artifact --artifact-type "application/vnd.diskimage.${{ matrix.format }}+gzip" \
+            --artifact --artifact-type "application/vnd.diskimage.${{ matrix.format }}" \
             --arch=${{ env.ARCH }} --os=linux \
-            "${MANIFEST_NAME}" "${DISK_IMAGE}"
+            "${{ env.OCI_DISK_IMAGE }}:${{ env.OCI_DISK_IMAGE_TAG }}" "${DISK_IMAGE_FILE}"
 
           podman manifest push \
             --sign-by-sigstore-private-key ./signingkey.private \
-            "${MANIFEST_NAME}" "docker://${MANIFEST_NAME}"
+            "${{ env.OCI_DISK_IMAGE }}:${{ env.OCI_DISK_IMAGE_TAG }}" \
+            "docker://${{ env.OCI_DISK_IMAGE }}:${{ env.OCI_DISK_IMAGE_TAG }}"
