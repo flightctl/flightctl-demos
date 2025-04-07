@@ -215,9 +215,12 @@ jobs:
           case ${{ matrix.format }} in
             raw)   echo "DISK_IMAGE_FILE=output/image/disk.raw" >> $GITHUB_ENV;;
             qcow2) echo "DISK_IMAGE_FILE=output/qcow2/disk.qcow2" >> $GITHUB_ENV;;
+            iso)   echo "DISK_IMAGE_FILE=output/bootiso/install.iso" >> $GITHUB_ENV;;
           esac
 
-      - name: Push disk image to registry and sign it
+      # Upload all formats except qcow2 as OCI artifact
+      - name: Push disk image to registry as OCI artifact and sign it
+        if: ${{ matrix.format != 'qcow2' }}
         run: |
           printf '%s' '${{ secrets.SIGNING_KEY_PRIVATE }}' > ./signingkey.private
 
@@ -232,3 +235,27 @@ jobs:
             --sign-by-sigstore-private-key ./signingkey.private \
             "${{ env.OCI_DISK_IMAGE }}:${{ env.OCI_DISK_IMAGE_TAG }}" \
             "docker://${{ env.OCI_DISK_IMAGE }}:${{ env.OCI_DISK_IMAGE_TAG }}"
+
+      # Upload qcow2 as "containerdisk" OCI image, as this is directly supported by KubeVirt
+      - name: Create the Containerfile for building the containerdisk image
+        if: ${{ matrix.format == 'qcow2' }}
+        run: |
+          cat <<'EOF' > Containerfile.qcow2
+          FROM registry.access.redhat.com/ubi9/ubi:latest AS builder
+          ADD --chown=107:107 output/qcow2/disk.qcow2 /disk/
+          RUN chmod 0440 /disk/*
+
+          FROM scratch
+          COPY --from=builder /disk/* /disk/
+          EOF
+
+      - name: Build the containerdisk image
+        if: ${{ matrix.format == 'qcow2' }}
+        run: |
+          podman build -t ${{ env.OCI_DISK_IMAGE }}:${{ env.OCI_DISK_IMAGE_TAG }} -f Containerfile.qcow2 .
+
+      - name: Push the containerdisk image to registry as OCI image and sign it
+        if: ${{ matrix.format == 'qcow2' }}
+        run: |
+          printf '%s' '${{ secrets.SIGNING_KEY_PRIVATE }}' > ./signingkey.private
+          podman push --sign-by-sigstore-private-key ./signingkey.private ${{ env.OCI_DISK_IMAGE }}:${{ env.OCI_DISK_IMAGE_TAG }}
