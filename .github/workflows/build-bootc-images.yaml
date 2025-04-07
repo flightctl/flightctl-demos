@@ -218,10 +218,6 @@ jobs:
             qcow2) echo "DISK_IMAGE=output/qcow2/disk.qcow2" >> $GITHUB_ENV;;
           esac
 
-      - name: Compress disk image
-        run: |
-          gzip "${DISK_IMAGE}"
-
       - name: Push compressed disk image to registry and sign it
         run: |
           printf '%s' '${{ secrets.SIGNING_KEY_PRIVATE }}' > ./signingkey.private
@@ -233,7 +229,7 @@ jobs:
           podman manifest add \
             --artifact --artifact-type "application/vnd.diskimage.${{ matrix.format }}+gzip" \
             --arch=${{ env.ARCH }} --os=linux \
-            "${MANIFEST_NAME}" "${DISK_IMAGE}.gz"
+            "${MANIFEST_NAME}" "${DISK_IMAGE}"
 
           podman manifest push \
             --sign-by-sigstore-private-key ./signingkey.private \
