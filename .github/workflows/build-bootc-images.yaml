@@ -101,7 +101,7 @@ jobs:
         run: |
           pushd ${IMAGE}/bootc
           podman build \
-            -t ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::7}-${{ env.ARCH }} \
+            -t ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::8}-${{ env.ARCH }} \
             -f Containerfile.${{ env.ARCH }} .
           popd
 
@@ -110,7 +110,7 @@ jobs:
           printf '%s' '${{ secrets.SIGNING_KEY_PRIVATE }}' > ./signingkey.private
           podman push \
             --sign-by-sigstore-private-key ./signingkey.private \
-            ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::7}-${{ env.ARCH }}
+            ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::8}-${{ env.ARCH }}
 
 
   build-bootc-manifestlist:
@@ -148,11 +148,11 @@ jobs:
 
       - name: Create manifest list
         run: |
-          podman manifest create ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::7}
+          podman manifest create ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::8}
           for arch in amd64 arm64; do
             podman manifest add \
-              ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::7} \
-              docker://${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::7}-${arch}
+              ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::8} \
+              docker://${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::8}-${arch}
           done
 
       - name: Push manifest list to registry and sign it
@@ -160,8 +160,8 @@ jobs:
           printf '%s' '${{ secrets.SIGNING_KEY_PRIVATE }}' > ./signingkey.private
           podman manifest push --all \
             --sign-by-sigstore-private-key ./signingkey.private \
-            ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::7} \
-            docker://${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::7}
+            ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::8} \
+            docker://${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::8}
 
 
   build-bootc-disk-images:
@@ -198,7 +198,7 @@ jobs:
         run: |
           mkdir -p "${GITHUB_WORKSPACE}/output"
 
-          BOOTC_IMAGE="${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::7}-${{ env.ARCH }}"
+          BOOTC_IMAGE="${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::8}-${{ env.ARCH }}"
 
           sudo podman pull "${BOOTC_IMAGE}"
 
@@ -222,7 +222,7 @@ jobs:
         run: |
           printf '%s' '${{ secrets.SIGNING_KEY_PRIVATE }}' > ./signingkey.private
 
-          MANIFEST_NAME="${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.SUBREPOSITORY }}${{ env.IMAGE }}:${GITHUB_SHA::7}-${{ matrix.format }}-${{ env.ARCH }}"
+          MANIFEST_NAME="${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.SUBREPOSITORY }}${{ env.IMAGE }}:${GITHUB_SHA::8}-${{ matrix.format }}-${{ env.ARCH }}"
 
           podman manifest create "${MANIFEST_NAME}"
 
