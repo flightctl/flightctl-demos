@@ -166,7 +166,7 @@ jobs:
           podman manifest push --all \
             --sign-by-sigstore-private-key ./signingkey.private \
             ${OCI_IMAGE}:${OCI_IMAGE_TAG} \
-            docker://${.OCI_IMAGE}:${OCI_IMAGE_TAG}
+            docker://${OCI_IMAGE}:${OCI_IMAGE_TAG}
 
 
   build-bootc-disk-images:
