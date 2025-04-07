@@ -163,15 +163,6 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::7} \
             docker://${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::7}
 
-      - name: Tag manifest list as "latest" and sign it
-        run: |
-          podman tag \
-            ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${GITHUB_SHA::7} \
-            ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:latest
-          podman push \
-            --sign-by-sigstore-private-key ./signingkey.private \
-            ${{ env.REGISTRY }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:latest
-
 
   build-bootc-disk-images:
     needs: [find-changed-bootc-images,build-bootc-images]
