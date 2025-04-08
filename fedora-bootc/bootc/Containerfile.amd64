@@ -1,11 +1,5 @@
 FROM quay.io/fedora/fedora-bootc:41
 
-RUN dnf -y install dnf5-plugins && \
-    dnf -y copr enable @redhat-et/flightctl && \
-    dnf -y install flightctl-agent && \
-    dnf -y clean all && \
-    systemctl enable flightctl-agent.service
-
 # Fix for "no default root filesystem type specified in container"
 RUN mkdir -p /usr/lib/bootc/install && cat <<-'EOF' > /usr/lib/bootc/install/00-fedora.toml
 [install]
@@ -13,6 +7,17 @@ root-fs-type = "xfs"
 kargs = ["audit=0"]
 EOF
 
-# ADD config.yaml /etc/flightctl/
+# Add Flight Control agent
+RUN dnf -y install dnf5-plugins && \
+    dnf -y copr enable @redhat-et/flightctl && \
+    dnf -y install flightctl-agent && \
+    dnf -y clean all && \
+    systemctl enable flightctl-agent.service
 
+# Add podman-compose tool
+RUN dnf -y install podman-compose && \
+    dnf -y clean all && \
+    systemctl enable podman.service
+
+# Run linter to catch basic errors
 RUN bootc container lint

@@ -1,10 +1,15 @@
 FROM quay.io/centos-bootc/centos-bootc:stream9
 
+# Add Flight Control agent
 RUN dnf -y copr enable @redhat-et/flightctl && \
     dnf -y install flightctl-agent && \
     dnf -y clean all && \
     systemctl enable flightctl-agent.service
 
-# ADD config.yaml /etc/flightctl/
+# Add podman-compose tool
+RUN dnf -y install epel-release && \
+    dnf -y install podman-compose && \
+    dnf -y clean all && \
+    systemctl enable podman.service
 
 RUN bootc container lint
