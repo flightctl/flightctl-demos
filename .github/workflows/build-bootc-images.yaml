@@ -3,15 +3,7 @@ name: Build OS images (bootc)
 on:
   workflow_dispatch:
   pull_request:
-    branches:
-      - main
-    paths:
-      - '*/bootc'
   push:
-    branches:
-      - main
-    paths:
-      - '*/bootc'
 
 env:
   OCI_REGISTRY: quay.io
