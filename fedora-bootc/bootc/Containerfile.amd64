@@ -11,13 +11,15 @@ EOF
 RUN dnf -y install dnf5-plugins && \
     dnf -y copr enable @redhat-et/flightctl && \
     dnf -y install flightctl-agent && \
-    dnf -y clean all && \
+    rm -rf /var/{cache,log} /var/lib/{dnf,rhsm} && \
     systemctl enable flightctl-agent.service
 
 # Add podman-compose tool
 RUN dnf -y install podman-compose && \
-    dnf -y clean all && \
+    rm -rf /var/{cache,log} /var/lib/{dnf,rhsm} && \
     systemctl enable podman.service
 
 # Run linter to catch basic errors
+# Note: We do not yet use --fatal-warnings as issues with
+# dnsmasq and flightctl RPMs would cause build to fail.
 RUN bootc container lint
