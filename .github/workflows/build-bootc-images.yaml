@@ -143,9 +143,7 @@ jobs:
         run: |
           podman manifest create ${OCI_IMAGE}:${OCI_IMAGE_TAG}
           for arch in amd64 arm64; do
-            podman manifest add \
-              ${OCI_IMAGE}:${OCI_IMAGE_TAG} \
-              docker://${OCI_IMAGE}:${OCI_IMAGE_TAG}-${arch}
+            podman manifest add ${OCI_IMAGE}:${OCI_IMAGE_TAG} docker://${OCI_IMAGE}:${OCI_IMAGE_TAG}-${arch}
           done
 
       - name: Push manifest list to registry and sign it
@@ -299,9 +297,7 @@ jobs:
         run: |
           podman manifest create ${OCI_DISK_IMAGE}:${OCI_DISK_IMAGE_TAG}
           for arch in amd64 arm64; do
-            podman manifest add \
-              ${OCI_DISK_IMAGE}:${OCI_DISK_IMAGE_TAG} \
-              docker://${OCI_DISK_IMAGE}:${OCI_DISK_IMAGE_TAG}-${arch}
+            podman manifest add --all ${OCI_DISK_IMAGE}:${OCI_DISK_IMAGE_TAG} docker://${OCI_DISK_IMAGE}:${OCI_DISK_IMAGE_TAG}-${arch}
           done
 
       - name: Push manifest list to registry and sign it
