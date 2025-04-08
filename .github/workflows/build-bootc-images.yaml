@@ -130,9 +130,6 @@ jobs:
       image: registry.access.redhat.com/ubi9/ubi
       options: --privileged
 
-    env:
-      ARCH: ${{ (matrix.runner == 'ubuntu-24.04-arm') && 'arm64' || 'amd64' }}
-
     steps:
       - name: Install container tools and configure them to attach Sigstore signatures
         run: |
@@ -269,3 +266,56 @@ jobs:
         run: |
           printf '%s' '${{ secrets.SIGNING_KEY_PRIVATE }}' > ./signingkey.private
           podman push --sign-by-sigstore-private-key ./signingkey.private ${OCI_DISK_IMAGE}:${OCI_DISK_IMAGE_TAG}
+
+
+  build-bootc-disk-manifestlist:
+    needs: [find-changed-bootc-images,build-bootc-disk-images]
+
+    if: ${{ needs.find-changed-bootc-images.outputs.images != '[]' }}
+
+    strategy:
+      matrix:
+        image: ${{ fromJSON(needs.find-changed-bootc-images.outputs.images) }}
+      max-parallel: 4
+      fail-fast: false
+
+    runs-on: ubuntu-24.04
+
+    container:
+      image: registry.access.redhat.com/ubi9/ubi
+      options: --privileged
+
+    steps:
+      - name: Install container tools and configure them to attach Sigstore signatures
+        run: |
+          dnf -y install podman
+          tee "/etc/containers/registries.d/${{ env.OCI_REGISTRY }}.yaml" > /dev/null <<EOF
+            docker:
+              ${{ env.OCI_REGISTRY }}:
+                use-sigstore-attachments: true
+          EOF
+
+      - name: Log in to OCI registry
+        run: podman login -u '${{ secrets.QUAY_PUBLISHER_USERNAME }}' -p '${{ secrets.QUAY_PUBLISHER_PASSWORD }}' ${{ env.OCI_REGISTRY }}
+
+      - name: Set env vars
+        run: |
+          echo "OCI_DISK_IMAGE=${{ env.OCI_REGISTRY }}/${{ env.OCI_ORG }}/${{ matrix.image }}/diskimage-${{ matrix.format }}" >> $GITHUB_ENV
+          echo "OCI_DISK_IMAGE_TAG=${GITHUB_SHA::8}" >> $GITHUB_ENV
+
+      - name: Create manifest list
+        run: |
+          podman manifest create ${OCI_DISK_IMAGE}:${OCI_DISK_IMAGE_TAG}
+          for arch in amd64 arm64; do
+            podman manifest add \
+              ${OCI_DISK_IMAGE}:${OCI_DISK_IMAGE_TAG} \
+              docker://${OCI_DISK_IMAGE}:${OCI_DISK_IMAGE_TAG}-${arch}
+          done
+
+      - name: Push manifest list to registry and sign it
+        run: |
+          printf '%s' '${{ secrets.SIGNING_KEY_PRIVATE }}' > ./signingkey.private
+          podman manifest push --all \
+            --sign-by-sigstore-private-key ./signingkey.private \
+            ${OCI_DISK_IMAGE}:${OCI_DISK_IMAGE_TAG} \
+            docker://${OCI_DISK_IMAGE}:${OCI_DISK_IMAGE_TAG}
