@@ -22,7 +22,7 @@ on:
         required: true
         default: 'flightctl-demos'
       agent-config:
-        description: '(Optional) Agent config to add to the image.'
+        description: '(Optional) Base64-encoded agent config.'
         type: string
         required: false
   workflow_call:
@@ -46,7 +46,7 @@ on:
         required: true
         default: 'flightctl-demos'
       agent-config:
-        description: '(Optional) Agent config to add to the image.'
+        description: '(Optional) Base64-encoded agent config.'
         type: string
         required: false
     secrets:
@@ -98,7 +98,7 @@ jobs:
         run: |
           pushd ${{ inputs.demo }}/bootc
           if [ -n "${{ inputs.agent-config }}" ]; then
-            echo "${{ inputs.agent-config }}" > config.yaml
+            echo "${{ inputs.agent-config }}" | base64 -d > config.yaml
             echo -e "\nADD config.yaml /etc/flightctl/\n" >> Containerfile.${{ env.ARCH }}
           fi
           podman build -t ${OCI_IMAGE}:${OCI_IMAGE_TAG} -f Containerfile.${{ env.ARCH }} .
