@@ -132,15 +132,6 @@ jobs:
             podman manifest add ${OCI_IMAGE}:${OCI_IMAGE_TAG} docker://${OCI_IMAGE}:${OCI_IMAGE_TAG}-${arch}
           done
 
-      - name: Tag manifest list
-        if: ${{ inputs.tags != '' }}
-        run: |
-          IFS=',' read -r -a tags <<< "{{ inputs.tags }}"
-          for tag in "${tags[@]}"; do
-            tag=$(echo "${tag}" | tr -d '[:space:]')
-            podman tag ${OCI_IMAGE}:${OCI_IMAGE_TAG} ${OCI_IMAGE}:${tag}
-          done
-
       - name: Push manifest list to registry and sign it
         run: |
           printf '%s' '${{ secrets.SIGNING_KEY_PRIVATE }}' > ./signingkey.private
@@ -149,3 +140,16 @@ jobs:
             ${OCI_IMAGE}:${OCI_IMAGE_TAG} \
             docker://${OCI_IMAGE}:${OCI_IMAGE_TAG}
 
+      - name: Tag manifest list with extra tags, push and sign them
+        if: ${{ inputs.tags != '' }}
+        run: |
+          printf '%s' '${{ secrets.SIGNING_KEY_PRIVATE }}' > ./signingkey.private
+          IFS=',' read -r -a tags <<< "${{ inputs.tags }}"
+          for tag in "${tags[@]}"; do
+            tag=$(echo "${tag}" | tr -d '[:space:]')
+            podman tag ${OCI_IMAGE}:${OCI_IMAGE_TAG} ${OCI_IMAGE}:${tag}
+            podman manifest push --all \
+              --sign-by-sigstore-private-key ./signingkey.private \
+              ${OCI_IMAGE}:${tag} \
+              docker://${OCI_IMAGE}:${tag}
+          done
