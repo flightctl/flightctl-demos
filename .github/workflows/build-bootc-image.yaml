@@ -8,7 +8,7 @@ on:
         type: string
         required: true
       tags:
-        description: 'Extra tags for the image (comma-separated).'
+        description: '(Optional) Extra tags for the image (comma-separated).'
         type: string
         required: false
       oci-registry:
@@ -21,6 +21,10 @@ on:
         type: string
         required: true
         default: 'flightctl-demos'
+      agent-config:
+        description: '(Optional) Agent config to add to the image.'
+        type: string
+        required: false
   workflow_call:
     inputs:
       demo:
@@ -28,7 +32,7 @@ on:
         type: string
         required: true
       tags:
-        description: 'Extra tags for the image (comma-separated).'
+        description: '(Optional) Extra tags for the image (comma-separated).'
         type: string
         required: false
       oci-registry:
@@ -41,6 +45,10 @@ on:
         type: string
         required: true
         default: 'flightctl-demos'
+      agent-config:
+        description: '(Optional) Agent config to add to the image.'
+        type: string
+        required: false
     secrets:
       OCI_REGISTRY_USERNAME:
         required: true
@@ -89,6 +97,10 @@ jobs:
       - name: Build bootc image
         run: |
           pushd ${{ inputs.demo }}/bootc
+          if [ -n "${{ inputs.agent-config }}" ]; then
+            echo "${{ inputs.agent-config }}" > config.yaml
+            echo -e "\nADD config.yaml /etc/flightctl/\n" >> Containerfile.${{ env.ARCH }}
+          fi
           podman build -t ${OCI_IMAGE}:${OCI_IMAGE_TAG} -f Containerfile.${{ env.ARCH }} .
           popd
 
