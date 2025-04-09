@@ -20,7 +20,7 @@ on:
         description: 'OCI organisation to push image to.'
         type: string
         required: true
-        default: '${{ github.repository_owner }}'
+        default: 'flightctl-demos'
   workflow_call:
     inputs:
       demo:
@@ -40,7 +40,7 @@ on:
         description: 'OCI organisation to push image to.'
         type: string
         required: true
-        default: '${{ github.repository_owner }}'
+        default: 'flightctl-demos'
     secrets:
       OCI_REGISTRY_USERNAME:
         required: true
