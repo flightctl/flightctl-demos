@@ -8,7 +8,7 @@ on:
         type: string
         required: true
       tags:
-        description: 'Extra tags for the image (comma-separated).'
+        description: '(Optional) Extra tags for the image (comma-separated).'
         type: string
         required: false
       oci-registry:
@@ -28,7 +28,7 @@ on:
         type: string
         required: true
       tags:
-        description: 'Extra tags for the image (comma-separated).'
+        description: '(Optional) Extra tags for the image (comma-separated).'
         type: string
         required: false
       oci-registry:
