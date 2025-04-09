@@ -85,7 +85,7 @@ jobs:
           EOF
 
       - name: Log in to OCI registry
-        run: podman login -u '${{ secrets.QUAY_PUBLISHER_USERNAME }}' -p '${{ secrets.QUAY_PUBLISHER_PASSWORD }}' ${{ env.OCI_REGISTRY }}
+        run: podman login -u '${{ secrets.OCI_REGISTRY_USERNAME }}' -p '${{ secrets.OCI_REGISTRY_PASSWORD }}' ${{ env.OCI_REGISTRY }}
 
       - name: Set env vars
         run: |
@@ -132,7 +132,7 @@ jobs:
           EOF
 
       - name: Log in to OCI registry
-        run: podman login -u '${{ secrets.QUAY_PUBLISHER_USERNAME }}' -p '${{ secrets.QUAY_PUBLISHER_PASSWORD }}' ${{ env.OCI_REGISTRY }}
+        run: podman login -u '${{ secrets.OCI_REGISTRY_USERNAME }}' -p '${{ secrets.OCI_REGISTRY_PASSWORD }}' ${{ env.OCI_REGISTRY }}
 
       - name: Set env vars
         run: |
@@ -181,7 +181,7 @@ jobs:
         uses: ./.github/actions/setup-podman5
 
       - name: Log in to OCI registry
-        run: podman login -u '${{ secrets.QUAY_PUBLISHER_USERNAME }}' -p '${{ secrets.QUAY_PUBLISHER_PASSWORD }}' ${{ env.OCI_REGISTRY }}
+        run: podman login -u '${{ secrets.OCI_REGISTRY_USERNAME }}' -p '${{ secrets.OCI_REGISTRY_PASSWORD }}' ${{ env.OCI_REGISTRY }}
 
       - name: Set env vars
         run: |
@@ -286,7 +286,7 @@ jobs:
           EOF
 
       - name: Log in to OCI registry
-        run: podman login -u '${{ secrets.QUAY_PUBLISHER_USERNAME }}' -p '${{ secrets.QUAY_PUBLISHER_PASSWORD }}' ${{ env.OCI_REGISTRY }}
+        run: podman login -u '${{ secrets.OCI_REGISTRY_USERNAME }}' -p '${{ secrets.OCI_REGISTRY_PASSWORD }}' ${{ env.OCI_REGISTRY }}
 
       - name: Set env vars
         run: |

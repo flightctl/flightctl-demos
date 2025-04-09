@@ -1,4 +1,4 @@
-name: Build bootc image
+name: Build & publish bootc image
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ on:
         type: string
         required: true
       tags:
-        description: 'Extra tags for the image.'
+        description: 'Extra tags for the image (comma-separated).'
         type: string
         required: false
       oci-registry:
@@ -20,7 +20,7 @@ on:
         description: 'OCI organisation to push image to.'
         type: string
         required: true
-        default: 'flightctl-demos'
+        default: '${{ github.repository_owner }}'
   workflow_call:
     inputs:
       demo:
@@ -28,7 +28,7 @@ on:
         type: string
         required: true
       tags:
-        description: 'Extra tags for the image.'
+        description: 'Extra tags for the image (comma-separated).'
         type: string
         required: false
       oci-registry:
@@ -40,11 +40,11 @@ on:
         description: 'OCI organisation to push image to.'
         type: string
         required: true
-        default: 'flightctl-demos'
+        default: '${{ github.repository_owner }}'
     secrets:
-      QUAY_PUBLISHER_USERNAME:
+      OCI_REGISTRY_USERNAME:
         required: true
-      QUAY_PUBLISHER_PASSWORD:
+      OCI_REGISTRY_PASSWORD:
         required: true
       SIGNING_KEY_PRIVATE:
         required: true
@@ -79,7 +79,7 @@ jobs:
           EOF
 
       - name: Log in to OCI registry
-        run: podman login -u '${{ secrets.QUAY_PUBLISHER_USERNAME }}' -p '${{ secrets.QUAY_PUBLISHER_PASSWORD }}' ${{ inputs.oci-registry }}
+        run: podman login -u '${{ secrets.OCI_REGISTRY_USERNAME }}' -p '${{ secrets.OCI_REGISTRY_PASSWORD }}' ${{ inputs.oci-registry }}
 
       - name: Set env vars
         run: |
@@ -118,7 +118,7 @@ jobs:
           EOF
 
       - name: Log in to OCI registry
-        run: podman login -u '${{ secrets.QUAY_PUBLISHER_USERNAME }}' -p '${{ secrets.QUAY_PUBLISHER_PASSWORD }}' ${{ inputs.oci-registry }}
+        run: podman login -u '${{ secrets.OCI_REGISTRY_USERNAME }}' -p '${{ secrets.OCI_REGISTRY_PASSWORD }}' ${{ inputs.oci-registry }}
 
       - name: Set env vars
         run: |
