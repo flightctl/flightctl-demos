@@ -1,0 +1,151 @@
+name: Build bootc image
+
+on:
+  workflow_dispatch:
+    inputs:
+      demo:
+        description: 'Name of the demo and image to build.'
+        type: string
+        required: true
+      tags:
+        description: 'Extra tags for the image.'
+        type: string
+        required: false
+      oci-registry:
+        description: 'OCI registry to push image to.'
+        type: string
+        required: true
+        default: 'quay.io'
+      oci-org:
+        description: 'OCI organisation to push image to.'
+        type: string
+        required: true
+        default: 'flightctl-demos'
+  workflow_call:
+    inputs:
+      demo:
+        description: 'Name of the demo and image to build.'
+        type: string
+        required: true
+      tags:
+        description: 'Extra tags for the image.'
+        type: string
+        required: false
+      oci-registry:
+        description: 'OCI registry to push image to.'
+        type: string
+        required: true
+        default: 'quay.io'
+      oci-org:
+        description: 'OCI organisation to push image to.'
+        type: string
+        required: true
+        default: 'flightctl-demos'
+    secrets:
+      QUAY_PUBLISHER_USERNAME:
+        required: true
+      QUAY_PUBLISHER_PASSWORD:
+        required: true
+      SIGNING_KEY_PRIVATE:
+        required: true
+
+jobs:
+  build-bootc-images:
+    strategy:
+      matrix:
+        runner: ["ubuntu-24.04","ubuntu-24.04-arm"]
+      fail-fast: false
+
+    runs-on: ${{ matrix.runner }}
+
+    container:
+      image: registry.access.redhat.com/ubi9/ubi
+      options: --privileged
+
+    env:
+      ARCH: ${{ (matrix.runner == 'ubuntu-24.04-arm') && 'arm64' || 'amd64' }}
+
+    steps:
+      - name: Clone the repository
+        uses: actions/checkout@v4
+
+      - name: Install Podman 5 and configure it to attach Sigstore signatures
+        run: |
+          dnf -y install podman
+          tee "/etc/containers/registries.d/${{ inputs.oci-registry }}.yaml" > /dev/null <<EOF
+            docker:
+              ${{ inputs.oci-registry }}:
+                use-sigstore-attachments: true
+          EOF
+
+      - name: Log in to OCI registry
+        run: podman login -u '${{ secrets.QUAY_PUBLISHER_USERNAME }}' -p '${{ secrets.QUAY_PUBLISHER_PASSWORD }}' ${{ inputs.oci-registry }}
+
+      - name: Set env vars
+        run: |
+          echo "OCI_IMAGE=${{ inputs.oci-registry }}/${{ inputs.oci-org }}/${{ inputs.demo }}" >> $GITHUB_ENV
+          echo "OCI_IMAGE_TAG=${GITHUB_SHA::8}-${{ env.ARCH }}" >> $GITHUB_ENV
+
+      - name: Build bootc image
+        run: |
+          pushd ${{ inputs.demo }}/bootc
+          podman build -t ${OCI_IMAGE}:${OCI_IMAGE_TAG} -f Containerfile.${{ env.ARCH }} .
+          popd
+
+      - name: Push image to registry and sign it
+        run: |
+          printf '%s' '${{ secrets.SIGNING_KEY_PRIVATE }}' > ./signingkey.private
+          podman push --sign-by-sigstore-private-key ./signingkey.private ${OCI_IMAGE}:${OCI_IMAGE_TAG}
+
+
+  build-bootc-manifestlist:
+    needs: [build-bootc-images]
+
+    runs-on: ubuntu-24.04
+
+    container:
+      image: registry.access.redhat.com/ubi9/ubi
+      options: --privileged
+
+    steps:
+      - name: Install container tools and configure them to attach Sigstore signatures
+        run: |
+          dnf -y install podman
+          tee "/etc/containers/registries.d/${{ inputs.oci-registry }}.yaml" > /dev/null <<EOF
+            docker:
+              ${{ inputs.oci-registry }}:
+                use-sigstore-attachments: true
+          EOF
+
+      - name: Log in to OCI registry
+        run: podman login -u '${{ secrets.QUAY_PUBLISHER_USERNAME }}' -p '${{ secrets.QUAY_PUBLISHER_PASSWORD }}' ${{ inputs.oci-registry }}
+
+      - name: Set env vars
+        run: |
+          echo "OCI_IMAGE=${{ inputs.oci-registry }}/${{ inputs.oci-org }}/${{ inputs.demo }}" >> $GITHUB_ENV
+          echo "OCI_IMAGE_TAG=${GITHUB_SHA::8}" >> $GITHUB_ENV
+
+      - name: Create manifest list
+        run: |
+          podman manifest create ${OCI_IMAGE}:${OCI_IMAGE_TAG}
+          for arch in amd64 arm64; do
+            podman manifest add ${OCI_IMAGE}:${OCI_IMAGE_TAG} docker://${OCI_IMAGE}:${OCI_IMAGE_TAG}-${arch}
+          done
+
+      - name: Tag manifest list
+        if: ${{ inputs.tags != '' }}
+        run: |
+          IFS=',' read -r -a tags <<< "{{ inputs.tags }}"
+          for tag in "${tags[@]}"; do
+            tag=$(echo "${tag}" | tr -d '[:space:]')
+            podman tag ${OCI_IMAGE}:${OCI_IMAGE_TAG} ${OCI_IMAGE}:${tag}
+          done
+
+      - name: Push manifest list to registry and sign it
+        run: |
+          printf '%s' '${{ secrets.SIGNING_KEY_PRIVATE }}' > ./signingkey.private
+          podman manifest push --all \
+            --sign-by-sigstore-private-key ./signingkey.private \
+            ${OCI_IMAGE}:${OCI_IMAGE_TAG} \
+            docker://${OCI_IMAGE}:${OCI_IMAGE_TAG}
+
