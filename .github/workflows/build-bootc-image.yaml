@@ -56,6 +56,8 @@ on:
         required: true
       SIGNING_KEY_PRIVATE:
         required: true
+      AGENT_CONFIG:
+        required: false
 
 jobs:
   build-bootc-images:
@@ -72,6 +74,7 @@ jobs:
 
     env:
       ARCH: ${{ (matrix.runner == 'ubuntu-24.04-arm') && 'arm64' || 'amd64' }}
+      AGENT_CONFIG: ${{ (inputs.agent-config != '') && inputs.agent-config || secrets.AGENT_CONFIG }}
 
     steps:
       - name: Clone the repository
@@ -97,8 +100,8 @@ jobs:
       - name: Build bootc image
         run: |
           pushd ${{ inputs.demo }}/bootc
-          if [ -n "${{ inputs.agent-config }}" ]; then
-            echo "${{ inputs.agent-config }}" | base64 -d > config.yaml
+          if [ -n "${AGENT_CONFIG}" ]; then
+            echo "${AGENT_CONFIG}" | base64 -d > config.yaml
             echo -e "\nADD config.yaml /etc/flightctl/\n" >> Containerfile.${{ env.ARCH }}
           fi
           podman build -t ${OCI_IMAGE}:${OCI_IMAGE_TAG} -f Containerfile.${{ env.ARCH }} .
