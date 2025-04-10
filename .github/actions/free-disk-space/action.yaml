@@ -1,0 +1,21 @@
+---
+name: 'Free Disk Space'
+description: 'This action frees up disk space on the runner by removing unnecessary files and directories.'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Disk space before
+      run: df -h
+
+    - name: Free disk space
+      run: |
+        sudo rm -rf \
+          "$AGENT_TOOLSDIRECTORY" \
+          /opt/ghc \
+          /usr/local/lib/android \
+          /usr/local/share/boost \
+          /usr/share/dotnet
+
+    - name: Disk space after
+      run: df -h
