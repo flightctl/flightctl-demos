@@ -1,0 +1,81 @@
+name: Build changed bootc images
+
+on:
+  workflow_dispatch:
+  pull_request:
+
+jobs:
+  find-changed-bootc-images:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Clone the repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Get changed bootc images
+        id: changed-dirs
+        uses: tj-actions/changed-files@v45
+        with:
+          dir_names: true
+          files: |
+            **/bootc/**
+          matrix: true
+
+      - name: Set output in matrix format
+        id: set-output
+        run: |
+          case "${{ github.event_name }}" in
+            pull_request|push)
+              dirs='${{ steps.changed-dirs.outputs.all_changed_files }}'
+              ;;
+            workflow_dispatch)
+              dirs=$(ls -d */bootc 2> /dev/null | jq -R . | jq -s .)
+              ;;
+            *) echo "Unknown event: ${{ github.event_name }}" && exit 1;;
+          esac
+          dirs=$(echo "${dirs}" | jq -c 'map(split("/") | .[-2])')
+          echo "changed_images=${dirs}"
+          echo "changed_images=${dirs}" >> "$GITHUB_OUTPUT"
+
+    outputs:
+      images: ${{ steps.set-output.outputs.changed_images }}
+
+
+  build-changed-bootc-images:
+    needs: [find-changed-bootc-images]
+
+    if: ${{ needs.find-changed-bootc-images.outputs.images != '[]' }}
+
+    strategy:
+      matrix:
+        image: ${{ fromJSON(needs.find-changed-bootc-images.outputs.images) }}
+      max-parallel: 4
+      fail-fast: false
+
+    uses: flightctl/flightctl-demos/.github/workflows/build-bootc-image.yaml@main
+    with:
+      demo: ${{ matrix.image }}
+      oci-registry: quay.io
+      oci-org: flightctl-demos
+    secrets: inherit
+
+
+  build-changed-bootc-disk-images:
+    needs: [find-changed-bootc-images, build-changed-bootc-images]
+
+    if: ${{ needs.find-changed-bootc-images.outputs.images != '[]' }}
+
+    strategy:
+      matrix:
+        image: ${{ fromJSON(needs.find-changed-bootc-images.outputs.images) }}
+      max-parallel: 4
+      fail-fast: false
+
+    uses: flightctl/flightctl-demos/.github/workflows/build-bootc-disk-image.yaml@main
+    with:
+      demo: ${{ matrix.image }}
+      oci-registry: quay.io
+      oci-org: flightctl-demos
+    secrets: inherit
