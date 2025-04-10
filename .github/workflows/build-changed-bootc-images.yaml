@@ -1,4 +1,4 @@
-name: Build changed bootc images
+name: Build changed OS images (bootc)
 
 on:
   workflow_dispatch:
@@ -73,7 +73,7 @@ jobs:
       max-parallel: 4
       fail-fast: false
 
-    uses: flightctl/flightctl-demos/.github/workflows/build-bootc-disk-image.yaml@main
+    uses: flightctl/flightctl-demos/.github/workflows/build-bootc-diskimage.yaml@main
     with:
       demo: ${{ matrix.image }}
       oci-registry: quay.io
