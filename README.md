@@ -26,7 +26,8 @@ Pre-built OS images and disk images for both `amd64` and `arm64` CPU architectur
 * OS images (bootc) are available at `quay.io/flightctl-demos/$DEMO_NAME:latest`.
 * OS disk images in ISO, RAW, and QCoW2 formats are available at `quay.io/flightctl-demos/$DEMO_NAME/diskimage-$FORMAT:latest`, whereby $FORMAT is one of `iso`, `raw`, or `qcow2`.
 
-> [!IMPORTANT] These pre-built images do not contain the enrollment configuration for the agent, i.e. they can only be used by provisioning methods supporting *late binding* (see the [docs](https://github.com/flightctl/flightctl/blob/main/docs/user/building-images.md#choosing-an-enrollment-method) for details). If you need _early binding_, you can [build your own images](#building-your-own-bootc-and-disk-images) containing the enrollment credentials to your service.
+> [!IMPORTANT]
+> These pre-built images do not contain the enrollment configuration for the agent, i.e. they can only be used by provisioning methods supporting *late binding* (see the [docs](https://github.com/flightctl/flightctl/blob/main/docs/user/building-images.md#choosing-an-enrollment-method) for details). If you need _early binding_, you can [build your own images](#building-your-own-bootc-and-disk-images) containing the enrollment credentials to your service.
 
 Disk iamges in formats `raw` and `iso` are stored as OCI artifacts, not OCI images, so you need to use a tool like [ORAS](https://oras.land/) to download them, e.g.:
 
@@ -83,8 +84,8 @@ Follow these steps:
     | OCI_REGISTRY_ORG | Your organisation within the registry. | my_quay_org |
     | OCI_REGISTRY_USERNAME | The username of your robot account. | my_robot_user |
     | OCI_REGISTRY_PASSWORD | The password of your robot account. | my_robot_password |
-    | SIGNING_KEY_PRIVATE | The content of the `signingkey.private` you created. | ZW5yb2xsbWVudC1zZXJ2... |
-    | AGENT_CONFIG | The content of the `config.yaml.b64` you created. | -----BEGIN ENCRYPTED COSIGN PRIVATE KEY-----... |
+    | SIGNING_KEY_PRIVATE | The content of the `signingkey.private` you created. | -----BEGIN ENCRYPTED COSIGN PRIVATE KEY-----... |
+    | AGENT_CONFIG | The content of the `config.yaml.b64` you created. | ZW5yb2xsbWVudC1zZXJ2... |
 
 7. Go to the "Actions" tab and confirm that you want to enable the forked workflows.
 
