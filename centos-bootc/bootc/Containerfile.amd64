@@ -6,6 +6,12 @@ RUN dnf -y copr enable @redhat-et/flightctl && \
     rm -rf /var/{cache,log} /var/lib/{dnf,rhsm} && \
     systemctl enable flightctl-agent.service
 
+# Add cloud-init and open-vm-tools
+RUN dnf -y install cloud-init open-vm-tools && \
+    ln -s ../cloud-init.target /usr/lib/systemd/system/default.target.wants && \
+    rm -rf /var/{cache,log} /var/lib/{dnf,rhsm} && \
+    systemctl enable vmtoolsd.service
+
 # Add podman-compose tool
 RUN dnf -y install epel-release && \
     dnf -y install podman-compose && \
