@@ -1,24 +1,25 @@
 FROM quay.io/centos-bootc/centos-bootc:stream9
 
+RUN sudo sed -i 's/^SELINUX=enforcing/SELINUX=permissive/' /etc/selinux/config
+
 # Add Flight Control agent
 RUN dnf -y copr enable @redhat-et/flightctl && \
     dnf -y install flightctl-agent && \
     rm -rf /var/{cache,log} /var/lib/{dnf,rhsm} && \
     systemctl enable flightctl-agent.service
 
-# Add cloud-init and open-vm-tools
-RUN dnf -y install cloud-init open-vm-tools && \
-    ln -s ../cloud-init.target /usr/lib/systemd/system/default.target.wants && \
-    rm -rf /var/{cache,log} /var/lib/{dnf,rhsm} && \
-    systemctl enable vmtoolsd.service
-
 # Add podman-compose tool
-RUN dnf -y install epel-release && \
+RUN dnf -y install epel-release dnf-plugins-core && \
+    dnf config-manager --set-enabled crb && \
     dnf -y install podman-compose && \
     rm -rf /var/{cache,log} /var/lib/{dnf,rhsm} && \
     systemctl enable podman.service
 
-# Run linter to catch basic errors
-# Note: We do not yet use --fatal-warnings as issues with
-# dnsmasq and flightctl RPMs would cause build to fail.
-RUN bootc container lint
+COPY flightctl_rsa.pub /usr/etc-system/root.keys
+RUN touch /etc/ssh/sshd_config.d/30-auth-system.conf; \
+    mkdir -p /usr/etc-system/; \
+    echo 'AuthorizedKeysFile /usr/etc-system/%u.keys' >> /etc/ssh/sshd_config.d/30-auth-system.conf; \
+    chmod 0600 /usr/etc-system/root.keys
+VOLUME /var/roothome
+
+ADD config.yaml /etc/flightctl/

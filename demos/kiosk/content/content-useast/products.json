@@ -1,0 +1,21 @@
+[
+  {
+    "name": "Transportation & Logistics",
+    "description": "Track, analyze, and adapt in motion. From real-time route optimization to vehicle-based edge AI, RHEM ensures your fleet stays in sync.",
+    "price": "No delays, no detours",
+    "image": "images/transportation.png"
+  },
+  {
+    "name": "Smart Cities",
+    "description": "Build the future of infrastructure — traffic lights, sensors, surveillance — all orchestrated at the edge. Efficiency and insight at urban scale.",
+    "price": "Built for the speed of life",
+    "image": "images/cities.png"
+  },
+  {
+    "name": "Telecom",
+    "description": "Scale edge apps from core to tower. Whether it's Open RAN, MEC, or 5G services, RHEM brings order to a highly distributed world.",
+    "price": "Signal strong, ops stronger",
+    "image": "images/telecom.png"
+  }
+]
+

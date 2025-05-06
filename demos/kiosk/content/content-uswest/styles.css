@@ -1,0 +1,109 @@
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Red Hat Display", sans-serif;
+  background-color: #212427;
+  color: #F5F7FA;
+  text-align: center;
+}
+
+@keyframes spin3d {
+  0% {
+    transform: translate(-50%) rotateY(0deg);
+  }
+  100% {
+    transform: translate(-50%) rotateY(360deg);
+  }
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 50%;
+  width: 50%;
+  height: 50%;
+  background: url("images/logo.png") no-repeat center center;
+  background-size: contain;
+  opacity: 0.2;
+  z-index: -1;
+  pointer-events: none;
+  transform: translate(-50%);
+  #animation: spin3d 20s linear infinite;
+  transform-style: preserve-3d;
+}
+
+.logo-container {
+  margin-top: 100px;
+  perspective: 1000px;
+}
+
+.logo {
+  width: 150px;
+  height: auto;
+  animation: flipInOut 3s infinite;
+}
+
+@keyframes flipInOut {
+  0% { transform: rotateY(0deg); opacity: 0; }
+  30% { opacity: 1; }
+  50% { transform: rotateY(180deg); opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: rotateY(0deg); opacity: 0; }
+}
+
+h1 {
+  font-size: 5em;
+  margin-top: 50px;
+  color: #FDCB6E;
+}
+
+
+.tagline {
+  font-size: 1.5em;
+  margin-top: 20px;
+}
+
+.card h2 {
+  color: #00D1CD;
+}
+
+.card p {
+  color: #FFFFFF;
+}
+
+.card {
+  background-color: #636e72;
+  color: #FDCB6E;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+  width: 180px;
+  margin: 10px;
+  padding: 15px;
+  font-size: 0.85em;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+  transform: scale(1.05);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  padding: 20px;
+  justify-items: center;
+}
+
+.card img {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  margin-bottom: 10px;
+}
+
