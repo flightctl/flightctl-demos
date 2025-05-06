@@ -1,0 +1,12 @@
+[Unit]
+Description=Configure GDM for kiosk autologin
+Before=graphical.target
+ConditionPathExists=!/etc/gdm/kiosk-autologin-configured
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/configure-kiosk-autologin.sh
+RemainAfterExit=true
+
+[Install]
+WantedBy=multi-user.target

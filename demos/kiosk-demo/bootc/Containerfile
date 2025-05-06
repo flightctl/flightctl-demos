@@ -1,0 +1,28 @@
+FROM registry.redhat.io/rhel9/rhel-bootc:9.5
+
+# Install Flight Control agent, browser, kiosk UI, and other tools.
+# Also disable bootc auto-update timer to avoid interference during demo.
+RUN dnf -y copr enable @redhat-et/flightctl \
+    && dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm \
+    && dnf install -y \
+        flightctl-agent \
+        gnome-shell \
+        gnome-kiosk \
+        gnome-kiosk-script-session \
+        firefox \
+        unzip \
+        podman-compose \
+    && dnf -y clean all \
+    && systemctl enable flightctl-agent.service \
+    && systemctl mask bootc-fetch-apply-updates.timer \
+    && systemctl set-default graphical.target
+
+# Create kiosk user
+RUN useradd -m kiosk && passwd -d kiosk
+
+# Set up autologin using a one-shot systemd service
+COPY --chmod=755 configure-kiosk-autologin.sh /usr/local/bin/configure-kiosk-autologin.sh
+COPY kiosk-autologin-setup.service /usr/lib/systemd/system/kiosk-autologin-setup.service
+
+# Enable the one-shot service so it runs at first boot
+RUN systemctl enable kiosk-autologin-setup.service

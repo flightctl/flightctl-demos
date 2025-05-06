@@ -1,0 +1,45 @@
+apiVersion: flightctl.io/v1alpha1
+kind: Fleet
+metadata:
+  labels: {}
+  name: kiosks
+spec:
+  selector:
+    matchLabels:
+      type: kiosk
+  template:
+    spec:
+      os:
+        image: quay.io/atraeger/rhel-kiosk-demo:v2
+      applications:
+        - name: kiosk-app
+          image: quay.io/atraeger/kiosk-app:v3
+          envVars: {}
+      config:
+        - name: gdm-restart-hook
+          inline:
+            - path: /etc/flightctl/hooks.d/afterupdating/10-restart-gdm.yaml
+              content: |-
+                - run: /usr/bin/systemctl restart gdm
+                  timeout: 10s
+                  if:
+                    - path: /etc/kiosk-mode/bin/url.conf
+                      op: [created, updated]
+                    - path: /var/kiosk/catalog/
+                      op: [created, updated, deleted]
+        - name: kiosk-url
+          inline:
+            - path: /etc/kiosk-mode/bin/url.conf
+              content: http://localhost:8080
+        - name: kiosk-content
+          gitRef:
+            repository: rh-kiosk
+            targetRevision: summit1
+            path: /content-{{ .metadata.labels.region }}
+            mountPath: /var/kiosk/catalog
+        - name: gnome-kiosk-script
+          gitRef:
+            repository: flightctl-demos
+            targetRevision: kiosk
+            path: /demos/kiosk-demo/kiosk-script/gnome-kiosk-script
+            mountPath: /home/kiosk/.local/bin/
