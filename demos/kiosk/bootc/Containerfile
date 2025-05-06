@@ -19,4 +19,26 @@ RUN dnf -y install epel-release dnf-plugins-core && \
     rm -rf /var/{cache,log} /var/lib/{dnf,rhsm} && \
     systemctl enable podman.service
 
+# Add browser, kiosk UI, and other tools.
+# Also disable bootc auto-update timer to avoid interference during demo.
+RUN dnf install -y \
+        gnome-shell \
+        gnome-kiosk \
+        gnome-kiosk-script-session \
+        firefox \
+        unzip \
+    && dnf -y clean all \
+    && systemctl mask bootc-fetch-apply-updates.timer \
+    && systemctl set-default graphical.target
+
+# Create kiosk user
+RUN useradd -m kiosk && passwd -d kiosk
+
+# Set up autologin using a one-shot systemd service
+COPY --chmod=755 configure-kiosk-autologin.sh /usr/local/bin/configure-kiosk-autologin.sh
+COPY kiosk-autologin-setup.service /usr/lib/systemd/system/kiosk-autologin-setup.service
+
+# Enable the one-shot service so it runs at first boot
+RUN systemctl enable kiosk-autologin-setup.service
+
 ADD config.yaml /etc/flightctl/
