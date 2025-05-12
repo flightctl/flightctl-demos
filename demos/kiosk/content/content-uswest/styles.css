@@ -30,7 +30,7 @@ body::before {
   z-index: -1;
   pointer-events: none;
   transform: translate(-50%);
-  #animation: spin3d 20s linear infinite;
+  animation: spin3d 20s linear infinite;
   transform-style: preserve-3d;
 }
 
