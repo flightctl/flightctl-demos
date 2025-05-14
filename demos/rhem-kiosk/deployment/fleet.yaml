@@ -1,0 +1,58 @@
+apiVersion: flightctl.io/v1alpha1
+kind: Fleet
+metadata:
+  labels: {}
+  name: kiosks
+spec:
+  selector:
+    matchLabels:
+      type: kiosk
+  template:
+    spec:
+      os:
+        image: quay.io/atraeger/rhem-kiosk:v1
+      applications:
+        - name: kiosk-app
+          appType: compose
+          inline:
+            - path: podman-compose.yaml
+              content: |-
+                version: "3.8"
+                services:
+                  kiosk:
+                    image: docker.io/library/python:3.11-slim
+                    working_dir: /app
+                    command: ["python", "-m", "http.server", "8080"]
+                    volumes:
+                      - /var/kiosk/catalog:/app:ro,z
+                    ports:
+                      - "8080:8080"
+          envVars: {}
+      config:
+        - name: gdm-restart-hook
+          inline:
+            - path: /etc/flightctl/hooks.d/afterupdating/10-restart-gdm.yaml
+              content: |-
+                - run: /usr/bin/systemctl restart gdm
+                  timeout: 10s
+                  if:
+                    - path: /etc/kiosk-mode/bin/url.conf
+                      op: [created, updated]
+                    - path: /var/kiosk/catalog/
+                      op: [created, updated, deleted]
+        - name: kiosk-url
+          inline:
+            - path: /etc/kiosk-mode/bin/url.conf
+              content: http://localhost:8080
+        - name: kiosk-content
+          gitRef:
+            repository: kiosk-content
+            targetRevision: summit1
+            path: /content-{{ .metadata.labels.region }}
+            mountPath: /var/kiosk/catalog
+        - name: gnome-kiosk-script
+          gitRef:
+            repository: flightctl-demos
+            targetRevision: rhem-kiosk
+            path: /demos/kiosk/kiosk-script/gnome-kiosk-script
+            mountPath: /root/.local/bin/

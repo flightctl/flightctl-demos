@@ -1,0 +1,50 @@
+FROM quay.io/centos-bootc/centos-bootc:stream9
+
+RUN sudo sed -i 's/^SELINUX=enforcing/SELINUX=permissive/' /etc/selinux/config
+
+# Add Flight Control agent
+RUN dnf -y copr enable @redhat-et/flightctl && \
+    dnf -y install flightctl-agent && \
+    rm -rf /var/{cache,log} /var/lib/{dnf,rhsm} && \
+    systemctl enable flightctl-agent.service
+
+# Add cloud-init and open-vm-tools
+#RUN dnf -y install cloud-init open-vm-tools && \
+#    ln -s ../cloud-init.target /usr/lib/systemd/system/default.target.wants && \
+#    rm -rf /var/{cache,log} /var/lib/{dnf,rhsm} && \
+#    systemctl enable vmtoolsd.service
+
+# Add podman-compose tool
+RUN dnf -y install epel-release dnf-plugins-core && \
+    dnf config-manager --set-enabled crb && \
+    dnf -y install podman-compose && \
+    rm -rf /var/{cache,log} /var/lib/{dnf,rhsm} && \
+    systemctl enable podman.service
+
+COPY flightctl_rsa.pub /usr/etc-system/root.keys
+RUN touch /etc/ssh/sshd_config.d/30-auth-system.conf; \
+    mkdir -p /usr/etc-system/; \
+    echo 'AuthorizedKeysFile /usr/etc-system/%u.keys' >> /etc/ssh/sshd_config.d/30-auth-system.conf; \
+    chmod 0600 /usr/etc-system/root.keys
+VOLUME /var/roothome
+
+# Add browser, kiosk UI, and other tools.
+# Also disable bootc auto-update timer to avoid interference during demo.
+RUN dnf install -y \
+        gnome-shell \
+        gnome-kiosk \
+        gnome-kiosk-script-session \
+        firefox \
+        unzip \
+    && dnf -y clean all \
+    && systemctl mask bootc-fetch-apply-updates.timer \
+    && systemctl set-default graphical.target
+
+# Set up autologin using a one-shot systemd service
+COPY --chmod=755 configure-kiosk-autologin.sh /usr/local/bin/configure-kiosk-autologin.sh
+COPY kiosk-autologin-setup.service /usr/lib/systemd/system/kiosk-autologin-setup.service
+
+# Enable the one-shot service so it runs at first boot
+RUN systemctl enable kiosk-autologin-setup.service
+
+ADD config.yaml /etc/flightctl/
