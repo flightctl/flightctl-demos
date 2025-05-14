@@ -47,7 +47,7 @@ spec:
         - name: kiosk-content
           gitRef:
             repository: kiosk-content
-            targetRevision: summit1
+            targetRevision: summit2
             path: /content-{{ .metadata.labels.region }}
             mountPath: /var/kiosk/catalog
         - name: gnome-kiosk-script
