@@ -46,9 +46,9 @@ spec:
               content: http://localhost:8080
         - name: kiosk-content
           gitRef:
-            repository: flightctl-demos
-            targetRevision: fckiosk
-            path: /demos/kiosk/content/content-{{ .metadata.labels.region }}
+            repository: kiosk-content
+            targetRevision: v1
+            path: /content-{{ .metadata.labels.region }}
             mountPath: /var/kiosk/catalog
         - name: gnome-kiosk-script
           gitRef:
