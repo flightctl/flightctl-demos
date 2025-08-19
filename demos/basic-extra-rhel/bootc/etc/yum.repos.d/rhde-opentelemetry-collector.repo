@@ -1,4 +1,4 @@
-name=Copr repo for redhat-opentelemetry-collector-main owned by RHOSDT Team
+[rhde-otl]
 baseurl=https://download.copr.fedorainfracloud.org/results/frzifus/redhat-opentelemetry-collector-main/fedora-$releasever-$basearch/
 type=rpm-md
 skip_if_unavailable=True
