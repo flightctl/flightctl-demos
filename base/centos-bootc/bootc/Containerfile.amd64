@@ -1,21 +1,27 @@
 FROM quay.io/centos-bootc/centos-bootc:stream9
 
 # Add Flight Control agent
-RUN dnf -y copr enable @redhat-et/flightctl && \
-    dnf -y install flightctl-agent && \
-    rm -rf /var/{cache,log} /var/lib/{dnf,rhsm} && \
+RUN dnf -y config-manager --add-repo https://rpm.flightctl.io/flightctl-epel.repo && \
+    dnf -y install flightctl-agent \
+      --nodocs --setopt=install_weak_deps=False && \
+    dnf clean all && \
+    rm -rf /var/{cache,log} && \
     systemctl enable flightctl-agent.service
 
 # Add cloud-init and open-vm-tools
-RUN dnf -y install cloud-init open-vm-tools && \
+RUN dnf -y install cloud-init open-vm-tools \
+      --nodocs --setopt=install_weak_deps=False && \
+    dnf clean all && \
+    rm -rf /var/{cache,log} && \
     ln -s ../cloud-init.target /usr/lib/systemd/system/default.target.wants && \
-    rm -rf /var/{cache,log} /var/lib/{dnf,rhsm} && \
     systemctl enable vmtoolsd.service
 
 # Add podman-compose tool
 RUN dnf -y install epel-release && \
-    dnf -y install podman-compose && \
-    rm -rf /var/{cache,log} /var/lib/{dnf,rhsm} && \
+    dnf -y install podman-compose \
+      --nodocs --setopt=install_weak_deps=False && \
+    dnf clean all && \
+    rm -rf /var/{cache,log} && \
     systemctl enable podman.service
 
 # Run linter to catch basic errors
