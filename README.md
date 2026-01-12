@@ -2,12 +2,18 @@
 
 This repo contains demos showcasing the edge management capabilities of the [Flight Control](https://github.com/flightctl/flightctl) project.
 
-## Available demos
+## Base Images
 
-| Demo | Description |
-|------|-------------|
-| [`centos-bootc`](centos-bootc/README.md) | Plain CentOS Stream 9 bootc image with Flight Control agent and podman-compose installed. |
-| [`fedora-bootc`](fedora-bootc/README.md) | Plain Fedora 41 bootc image with Flight Control agent and podman-compose installed. |
+The repository includes base bootc images that can be used as foundations for custom demos:
+
+| Image | Description |
+|-------|-------------|
+| [`base/centos-bootc`](base/centos-bootc/) | CentOS Stream 9 bootc base image with Flight Control agent and podman-compose installed. |
+| [`base/fedora-bootc`](base/fedora-bootc/) | Fedora 41 bootc base image with Flight Control agent and podman-compose installed. |
+
+## Demo Applications
+
+See the [`demos/`](demos/) directory for complete demo applications that showcase specific use cases.
 
 ## Running a demo
 
