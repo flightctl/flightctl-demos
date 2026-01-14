@@ -2,3 +2,13 @@
 *.key
 /output
 config.json
+
+# Disk images
+*.iso
+*.raw
+*.qcow2
+
+# Signing keys
+*.private
+*.pub
+config.yaml
