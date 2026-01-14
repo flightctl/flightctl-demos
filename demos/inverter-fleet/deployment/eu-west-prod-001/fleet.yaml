@@ -1,4 +1,4 @@
-apiVersion: v1alpha1
+apiVersion: v1beta1
 kind: Fleet
 metadata:
   name: eu-west-prod-001
