@@ -31,11 +31,13 @@ jobs:
               dirs='${{ steps.changed-dirs.outputs.all_changed_files }}'
               ;;
             workflow_dispatch)
-              dirs=$(ls -d */bootc 2> /dev/null | jq -R . | jq -s .)
+              # Find all images in base/ and demos/ directories
+              dirs=$(find base demos -mindepth 1 -maxdepth 1 -type d -exec test -d {}/bootc \; -print 2>/dev/null | jq -R . | jq -s .)
               ;;
             *) echo "Unknown event: ${{ github.event_name }}" && exit 1;;
           esac
-          dirs=$(echo "${dirs}" | jq -c 'map(split("/") | .[-2])')
+          # Extract parent directory (e.g., base/centos-bootc from base/centos-bootc/bootc)
+          dirs=$(echo "${dirs}" | jq -c 'map(split("/") | .[0:2] | join("/"))')
           echo "changed_images=${dirs}"
           echo "changed_images=${dirs}" >> "$GITHUB_OUTPUT"
 
