@@ -1,0 +1,56 @@
+name: PR Validation - Build & Test
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Clone the repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Get changed bootc images
+        id: changed-dirs
+        uses: tj-actions/changed-files@v45
+        with:
+          dir_names: true
+          files: |
+            **/bootc/**
+          matrix: true
+
+      - name: Set output in matrix format
+        id: set-output
+        run: |
+          dirs='${{ steps.changed-dirs.outputs.all_changed_files }}'
+          # Extract parent directory (e.g., base/centos-bootc from base/centos-bootc/bootc)
+          dirs=$(echo "${dirs}" | jq -c 'map(split("/") | .[0:2] | join("/"))')
+          echo "changed_images=${dirs}"
+          echo "changed_images=${dirs}" >> "$GITHUB_OUTPUT"
+
+    outputs:
+      images: ${{ steps.set-output.outputs.changed_images }}
+
+
+  build-and-test:
+    needs: [detect-changes]
+
+    if: ${{ needs.detect-changes.outputs.images != '[]' }}
+
+    strategy:
+      matrix:
+        image: ${{ fromJSON(needs.detect-changes.outputs.images) }}
+      max-parallel: 4
+      fail-fast: false
+
+    uses: flightctl/flightctl-demos/.github/workflows/build-bootc-image.yaml@main
+    with:
+      demo: ${{ matrix.image }}
+      oci-registry: quay.io
+      oci-org: flightctl-demos
+      dry_run: true
+    secrets: inherit

@@ -25,6 +25,11 @@ on:
         description: '(Optional) Base64-encoded agent config.'
         type: string
         required: false
+      dry_run:
+        description: 'Build only without pushing to registry (for testing).'
+        type: boolean
+        required: false
+        default: false
   workflow_call:
     inputs:
       demo:
@@ -49,6 +54,11 @@ on:
         description: '(Optional) Base64-encoded agent config.'
         type: string
         required: false
+      dry_run:
+        description: 'Build only without pushing to registry (for testing).'
+        type: boolean
+        required: false
+        default: false
     secrets:
       OCI_REGISTRY_USERNAME:
         required: true
@@ -107,7 +117,11 @@ jobs:
           podman build -t ${OCI_IMAGE}:${OCI_IMAGE_TAG} -f Containerfile.${{ env.ARCH }} .
           popd
 
+      - name: Lint bootc image
+        run: podman run --rm ${OCI_IMAGE}:${OCI_IMAGE_TAG} bootc container lint --fatal-warnings
+
       - name: Push image to registry and sign it
+        if: ${{ ! inputs.dry_run }}
         run: |
           printf '%s' '${{ secrets.SIGNING_KEY_PRIVATE }}' > ./signingkey.private
           podman push --sign-by-sigstore-private-key ./signingkey.private ${OCI_IMAGE}:${OCI_IMAGE_TAG}
@@ -115,6 +129,8 @@ jobs:
 
   build-bootc-manifestlist:
     needs: [build-bootc-images]
+
+    if: ${{ ! inputs.dry_run }}
 
     runs-on: ubuntu-24.04
 

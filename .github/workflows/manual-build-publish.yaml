@@ -1,0 +1,80 @@
+name: Manual Build & Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      images:
+        description: 'Images to build (comma-separated, e.g., "base/centos-bootc,demos/basic-nginx-demo"). Leave empty to build all.'
+        type: string
+        required: false
+        default: ''
+      tags:
+        description: 'Additional tags for the images (comma-separated, e.g., "latest,v1.0"). Default: commit SHA.'
+        type: string
+        required: false
+        default: ''
+
+jobs:
+  find-changed-bootc-images:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Clone the repository
+        uses: actions/checkout@v4
+
+      - name: Set output in matrix format
+        id: set-output
+        run: |
+          if [ -n "${{ inputs.images }}" ]; then
+            # User provided specific images
+            dirs=$(echo "${{ inputs.images }}" | tr ',' '\n' | jq -R . | jq -s -c .)
+          else
+            # Build all images in base/ and demos/ directories
+            dirs=$(find base demos -mindepth 1 -maxdepth 1 -type d -exec test -d {}/bootc \; -print 2>/dev/null | jq -R . | jq -s -c .)
+          fi
+          echo "changed_images=${dirs}"
+          echo "changed_images=${dirs}" >> "$GITHUB_OUTPUT"
+
+    outputs:
+      images: ${{ steps.set-output.outputs.changed_images }}
+
+
+  build-changed-bootc-images:
+    needs: [find-changed-bootc-images]
+
+    if: ${{ needs.find-changed-bootc-images.outputs.images != '[]' }}
+
+    strategy:
+      matrix:
+        image: ${{ fromJSON(needs.find-changed-bootc-images.outputs.images) }}
+      max-parallel: 4
+      fail-fast: false
+
+    uses: flightctl/flightctl-demos/.github/workflows/build-bootc-image.yaml@main
+    with:
+      demo: ${{ matrix.image }}
+      oci-registry: quay.io
+      oci-org: flightctl-demos
+      tags: ${{ inputs.tags || github.sha }}
+      dry_run: false
+    secrets: inherit
+
+
+  build-changed-bootc-disk-images:
+    needs: [find-changed-bootc-images, build-changed-bootc-images]
+
+    if: ${{ needs.find-changed-bootc-images.outputs.images != '[]' }}
+
+    strategy:
+      matrix:
+        image: ${{ fromJSON(needs.find-changed-bootc-images.outputs.images) }}
+      max-parallel: 4
+      fail-fast: false
+
+    uses: flightctl/flightctl-demos/.github/workflows/build-bootc-diskimage.yaml@main
+    with:
+      demo: ${{ matrix.image }}
+      oci-registry: quay.io
+      oci-org: flightctl-demos
+      tags: ${{ inputs.tags || github.sha }}
+    secrets: inherit
