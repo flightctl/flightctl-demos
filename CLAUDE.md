@@ -49,15 +49,76 @@ image-name/
 
 All image builds are performed via GitHub Actions workflows. There are no local build scripts.
 
-### Automated Builds (CI)
+### CI/CD Workflows
 
-The workflow [build-changed-bootc-images.yaml](.github/workflows/build-changed-bootc-images.yaml) automatically runs on pull requests and:
+The repository uses three GitHub Actions workflows for building and publishing images:
 
-1. Detects which bootc images changed (by looking for changes in `**/bootc/**`)
-2. Builds both the bootc image and disk images for changed demos
-3. Supports both amd64 and arm64 architectures
-4. Creates multi-architecture manifest lists
-5. Signs all images with Sigstore
+#### 1. PR Validation ([pr-validation.yaml](.github/workflows/pr-validation.yaml))
+
+**Trigger:** Pull requests (opened, synchronize, reopened)
+
+**Purpose:** Fast feedback for PRs without publishing to registry
+
+**What it does:**
+
+- Detects which bootc images changed (by looking for changes in `**/bootc/**`)
+- Builds changed bootc images for both amd64 and arm64 architectures
+- Runs `bootc container lint --fatal-warnings` on built images
+- **Does NOT** build disk images (too slow for PR validation)
+- **Does NOT** push images to registry
+
+**Build time:** ~5-10 minutes
+
+#### 2. Publish on Merge ([publish-on-merge.yaml](.github/workflows/publish-on-merge.yaml))
+
+**Trigger:** Push to main branch (after PR merge)
+
+**Purpose:** Automatically build and publish validated changes
+
+**What it does:**
+
+- Detects which bootc images changed in the merge
+- Builds changed bootc images for both amd64 and arm64 architectures
+- Runs `bootc container lint --fatal-warnings` on built images
+- Builds disk images (ISO, RAW, QCoW2) for all architectures
+- Creates multi-architecture manifest lists
+- Signs all images with Sigstore
+- Publishes to quay.io/flightctl-demos with tags: `latest` and `<commit-sha>`
+
+**Build time:** ~30+ minutes (includes disk images)
+
+#### 3. Manual Build & Publish ([manual-build-publish.yaml](.github/workflows/manual-build-publish.yaml))
+
+**Trigger:** Manual dispatch from GitHub Actions UI
+
+**Purpose:** Rebuild/republish any image on demand
+
+**Options:**
+
+- **images:** Comma-separated list of images to build (e.g., "base/centos-bootc,demos/basic-nginx-demo"). Leave empty to build all.
+- **tags:** Custom tags for the images (e.g., "latest,v1.0"). Defaults to commit SHA.
+
+**What it does:**
+
+- Builds specified (or all) bootc images
+- Runs `bootc container lint --fatal-warnings`
+- Builds disk images
+- Publishes with custom or default tags
+
+### Automated Dependency Updates (Renovate)
+
+The repository uses Renovate bot ([renovate.json5](.github/renovate.json5)) to automatically update dependencies:
+
+**What it tracks:**
+
+- Base container images in Containerfiles (e.g., `quay.io/centos-bootc/centos-bootc:stream9`)
+- GitHub Actions versions (e.g., `actions/checkout@v4`)
+
+**Schedule:** Runs nightly (10pm-5am UTC)
+
+**Auto-merge:** If CI passes (PR validation workflow), Renovate PRs are automatically merged
+
+**PR limits:** Maximum 3 concurrent PRs to avoid overwhelming CI
 
 ### Image Output
 
@@ -131,7 +192,7 @@ When modifying Containerfile.amd64 or Containerfile.arm64:
    ADD config.yaml /etc/flightctl/
    ```
 
-4. **Linting**: Always include `RUN bootc container lint` as the final step to validate
+4. **Linting**: Including `RUN bootc container lint` as the final step is recommended for early feedback during local builds. However, CI workflows enforce linting automatically, so forgotten lints won't slip through
 
 5. **Keep architecture variants in sync**: Changes to one architecture should typically be mirrored to the other unless there's an architecture-specific reason
 
@@ -196,7 +257,7 @@ To add a new demo image:
 
 4. (Optional) Add runtime configuration in `configuration/`
 
-5. Open a PR - the CI workflow will automatically build and publish your new image
+5. Open a PR - the PR validation workflow will automatically build and test your new image. After merge, it will be published to the registry
 
 ## Prerequisites for Building Custom Images
 

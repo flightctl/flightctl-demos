@@ -1,11 +1,12 @@
-name: Build changed OS images (bootc)
+name: Publish on merge to main
 
 on:
-  workflow_dispatch:
-  pull_request:
+  push:
+    branches:
+      - main
 
 jobs:
-  find-changed-bootc-images:
+  detect-changes:
     runs-on: ubuntu-24.04
 
     steps:
@@ -26,16 +27,7 @@ jobs:
       - name: Set output in matrix format
         id: set-output
         run: |
-          case "${{ github.event_name }}" in
-            pull_request|push)
-              dirs='${{ steps.changed-dirs.outputs.all_changed_files }}'
-              ;;
-            workflow_dispatch)
-              # Find all images in base/ and demos/ directories
-              dirs=$(find base demos -mindepth 1 -maxdepth 1 -type d -exec test -d {}/bootc \; -print 2>/dev/null | jq -R . | jq -s .)
-              ;;
-            *) echo "Unknown event: ${{ github.event_name }}" && exit 1;;
-          esac
+          dirs='${{ steps.changed-dirs.outputs.all_changed_files }}'
           # Extract parent directory (e.g., base/centos-bootc from base/centos-bootc/bootc)
           dirs=$(echo "${dirs}" | jq -c 'map(split("/") | .[0:2] | join("/"))')
           echo "changed_images=${dirs}"
@@ -45,14 +37,14 @@ jobs:
       images: ${{ steps.set-output.outputs.changed_images }}
 
 
-  build-changed-bootc-images:
-    needs: [find-changed-bootc-images]
+  build-bootc-images:
+    needs: [detect-changes]
 
-    if: ${{ needs.find-changed-bootc-images.outputs.images != '[]' }}
+    if: ${{ needs.detect-changes.outputs.images != '[]' }}
 
     strategy:
       matrix:
-        image: ${{ fromJSON(needs.find-changed-bootc-images.outputs.images) }}
+        image: ${{ fromJSON(needs.detect-changes.outputs.images) }}
       max-parallel: 4
       fail-fast: false
 
@@ -61,17 +53,19 @@ jobs:
       demo: ${{ matrix.image }}
       oci-registry: quay.io
       oci-org: flightctl-demos
+      tags: latest,${{ github.sha }}
+      dry_run: false
     secrets: inherit
 
 
-  build-changed-bootc-disk-images:
-    needs: [find-changed-bootc-images, build-changed-bootc-images]
+  build-disk-images:
+    needs: [detect-changes, build-bootc-images]
 
-    if: ${{ needs.find-changed-bootc-images.outputs.images != '[]' }}
+    if: ${{ needs.detect-changes.outputs.images != '[]' }}
 
     strategy:
       matrix:
-        image: ${{ fromJSON(needs.find-changed-bootc-images.outputs.images) }}
+        image: ${{ fromJSON(needs.detect-changes.outputs.images) }}
       max-parallel: 4
       fail-fast: false
 
@@ -80,4 +74,5 @@ jobs:
       demo: ${{ matrix.image }}
       oci-registry: quay.io
       oci-org: flightctl-demos
+      tags: latest,${{ github.sha }}
     secrets: inherit
