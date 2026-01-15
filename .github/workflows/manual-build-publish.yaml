@@ -50,7 +50,7 @@ jobs:
       max-parallel: 4
       fail-fast: false
 
-    uses: flightctl/flightctl-demos/.github/workflows/build-bootc-image.yaml@main
+    uses: ./.github/workflows/build-bootc-image.yaml
     with:
       demo: ${{ matrix.image }}
       oci-registry: quay.io
@@ -71,7 +71,7 @@ jobs:
       max-parallel: 4
       fail-fast: false
 
-    uses: flightctl/flightctl-demos/.github/workflows/build-bootc-diskimage.yaml@main
+    uses: ./.github/workflows/build-bootc-diskimage.yaml
     with:
       demo: ${{ matrix.image }}
       oci-registry: quay.io
