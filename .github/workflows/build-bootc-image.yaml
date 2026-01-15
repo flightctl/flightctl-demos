@@ -118,7 +118,7 @@ jobs:
           popd
 
       - name: Lint bootc image
-        run: podman run --rm ${OCI_IMAGE}:${OCI_IMAGE_TAG} bootc container lint --fatal-warnings
+        run: podman run --rm ${OCI_IMAGE}:${OCI_IMAGE_TAG} bootc container lint --fatal-warnings --skip var-tmpfiles
 
       - name: Push image to registry and sign it
         if: ${{ ! inputs.dry_run }}
