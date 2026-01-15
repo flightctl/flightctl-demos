@@ -8,7 +8,8 @@ kargs = ["audit=0"]
 EOF
 
 # Add Flight Control agent
-RUN dnf -y config-manager addrepo --from-repofile=https://rpm.flightctl.io/flightctl-fedora.repo \
+RUN dnf -y install dnf5-plugins && \
+    dnf -y config-manager addrepo --from-repofile=https://rpm.flightctl.io/flightctl-fedora.repo && \
     dnf -y install flightctl-agent \
       --nodocs --setopt=install_weak_deps=False && \
     dnf clean all && \
