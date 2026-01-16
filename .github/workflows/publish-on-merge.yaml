@@ -1,4 +1,4 @@
-name: Publish on merge to main
+name: Publish on Merge
 
 on:
   push:

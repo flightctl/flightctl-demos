@@ -1,4 +1,4 @@
-name: PR Validation - Build & Test
+name: Build & Test
 
 on:
   pull_request:

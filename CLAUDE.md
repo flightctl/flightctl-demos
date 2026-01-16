@@ -13,7 +13,7 @@ The repository is organized into two main categories:
 ### Base Images
 
 - [base/centos-bootc/](base/centos-bootc/) - CentOS Stream 9 bootc base image
-- [base/fedora-bootc/](base/fedora-bootc/) - Fedora 41 bootc base image
+- [base/fedora-bootc/](base/fedora-bootc/) - Fedora 43 bootc base image
 
 Both base images include:
 
@@ -51,9 +51,38 @@ All image builds are performed via GitHub Actions workflows. There are no local 
 
 ### CI/CD Workflows
 
-The repository uses three GitHub Actions workflows for building and publishing images:
+The repository uses the following GitHub Actions workflows for building and publishing images:
 
-#### 1. PR Validation ([pr-validation.yaml](.github/workflows/pr-validation.yaml))
+#### 1. Build & Publish bootc image ([build-bootc-image.yaml](.github/workflows/build-bootc-image.yaml))
+
+**Trigger:** Called manually or from other workflows
+
+**Purpose:** Reusable workflow for building and (optionally) publishing a bootc image.
+
+**What it does:**
+
+- Builds a bootc image for the specified demo for both amd64 and arm64 architectures (`demos/DEMO_NAME/bootc/**`)
+- Optionally, adds a specified agent config to the image.
+- If `dry_run` is not specified or is `false`, creates a multi-architecture manifest list.
+- If `dry_run` is not specified or is `false`, signs and publishes the manifest list and images to the specified registry.
+
+**Build time:** ~5-10 minutes
+
+### 2. Build & Publish disk images ([build-bootc-diskimage.yaml](.github/workflows/build-bootc-diskimage.yaml))
+
+**Trigger:** Called manually or from other workflows
+
+**Purpose:** Reusable workflow for building and publishing `.raw`, `.iso`, and `.qcow2` disk images for the specified bootc image.
+
+**What it does:**
+
+- Pulls the specified bootc image for both amd64 and arm64 architectures.
+- Uses bootc iamge builder to build `.raw`, `.qcow2`, and `.iso` artifacts for both amd64 and arm64 architectures.
+- Signs and publishes these artifacts to the specified registry.
+
+**Build time:** ~5-10 minutes
+
+#### 3. Build & Test ([build-and-test.yaml](.github/workflows/build-and-test.yaml))
 
 **Trigger:** Pull requests (opened, synchronize, reopened)
 
@@ -69,7 +98,7 @@ The repository uses three GitHub Actions workflows for building and publishing i
 
 **Build time:** ~5-10 minutes
 
-#### 2. Publish on Merge ([publish-on-merge.yaml](.github/workflows/publish-on-merge.yaml))
+#### 4. Publish on Merge ([publish-on-merge.yaml](.github/workflows/publish-on-merge.yaml))
 
 **Trigger:** Push to main branch (after PR merge)
 
@@ -86,24 +115,6 @@ The repository uses three GitHub Actions workflows for building and publishing i
 - Publishes to quay.io/flightctl-demos with tags: `latest` and `<commit-sha>`
 
 **Build time:** ~30+ minutes (includes disk images)
-
-#### 3. Manual Build & Publish ([manual-build-publish.yaml](.github/workflows/manual-build-publish.yaml))
-
-**Trigger:** Manual dispatch from GitHub Actions UI
-
-**Purpose:** Rebuild/republish any image on demand
-
-**Options:**
-
-- **images:** Comma-separated list of images to build (e.g., "base/centos-bootc,demos/basic-nginx-demo"). Leave empty to build all.
-- **tags:** Custom tags for the images (e.g., "latest,v1.0"). Defaults to commit SHA.
-
-**What it does:**
-
-- Builds specified (or all) bootc images
-- Runs `bootc container lint --fatal-warnings`
-- Builds disk images
-- Publishes with custom or default tags
 
 ### Automated Dependency Updates (Renovate)
 
