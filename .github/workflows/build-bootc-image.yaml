@@ -25,6 +25,10 @@ on:
         description: '(Optional) Base64-encoded agent config.'
         type: string
         required: false
+      agent-version:
+        description: '(Optional) flightctl-agent version to install.'
+        type: string
+        required: false
       dry_run:
         description: 'Build only without pushing to registry (for testing).'
         type: boolean
@@ -52,6 +56,10 @@ on:
         default: 'flightctl-demos'
       agent-config:
         description: '(Optional) Base64-encoded agent config.'
+        type: string
+        required: false
+      agent-version:
+        description: '(Optional) flightctl-agent version to install.'
         type: string
         required: false
       dry_run:
@@ -114,7 +122,11 @@ jobs:
             echo "${AGENT_CONFIG}" | base64 -d > config.yaml
             echo -e "\nADD config.yaml /etc/flightctl/\n" >> Containerfile.${{ env.ARCH }}
           fi
-          podman build -t ${OCI_IMAGE}:${OCI_IMAGE_TAG} -f Containerfile.${{ env.ARCH }} .
+          BUILD_ARGS=""
+          if [ -n "${{ inputs.agent-version }}" ]; then
+            BUILD_ARGS="--build-arg FLIGHTCTL_VERSION=${{ inputs.agent-version }}"
+          fi
+          podman build ${BUILD_ARGS} -t ${OCI_IMAGE}:${OCI_IMAGE_TAG} -f Containerfile.${{ env.ARCH }} .
           popd
 
       - name: Lint bootc image

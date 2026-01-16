@@ -1,8 +1,11 @@
-FROM quay.io/centos-bootc/centos-bootc:stream9
+# renovate: datasource=docker depName=quay.io/centos-bootc/centos-bootc
+FROM quay.io/centos-bootc/centos-bootc:stream9@sha256:1cfd4fee1ccaa12fd6db5de7e25df160d9b28b75ecd98d2f02068fb34332d565
 
 # Add Flight Control agent
+# renovate: datasource=rpm depName=flightctl-agent registryUrl=https://rpm.flightctl.io/epel/9/x86_64/
+ARG FLIGHTCTL_VERSION=1.0.2
 RUN dnf -y config-manager --add-repo https://rpm.flightctl.io/flightctl-epel.repo && \
-    dnf -y install flightctl-agent \
+    dnf -y install flightctl-agent${FLIGHTCTL_VERSION:+-${FLIGHTCTL_VERSION}} \
       --nodocs --setopt=install_weak_deps=False && \
     dnf clean all && \
     rm -rf /var/{cache,log} && \

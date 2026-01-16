@@ -1,9 +1,9 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:base"],
+  "extends": ["config:recommended"],
 
   // Schedule: Run nightly
-  "schedule": ["after 10pm and before 5am"],
+  "schedule": ["after 10pm", "before 5am"],
   "timezone": "UTC",
 
   // Auto-merge if CI passes
@@ -12,20 +12,15 @@
   "automergeStrategy": "squash",
   "platformAutomerge": true,
 
-  // Custom regex managers for RPM packages
-  "regexManagers": [
+  // Custom managers for RPM packages
+  "customManagers": [
     {
-      // Track flightctl-agent RPM package versions
-      "fileMatch": ["^.*bootc/Containerfile.*$"],
+      "customType": "regex",
+      "fileMatch": ["(^|/)Containerfile[^/]*$", "(^|/)Dockerfile[^/]*$"],
       "matchStrings": [
-        // Match: dnf install flightctl-agent or dnf install flightctl-agent-X.Y.Z
-        "dnf -y install flightctl-agent(?:-(?<currentValue>[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9]+)?))?"
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)(?: registryUrl=(?<registryUrl>\\S+))?\\s+ARG .*?_VERSION=(?<currentValue>\\S+)"
       ],
-      "depNameTemplate": "flightctl-agent",
-      "packageNameTemplate": "flightctl/flightctl",
-      "datasourceTemplate": "github-releases",
-      "versioningTemplate": "semver",
-      "extractVersionTemplate": "^v(?<version>.*)$"
+      "versioningTemplate": "rpm"
     }
   ],
 
@@ -40,14 +35,14 @@
     {
       // Track base container images in Containerfiles
       "matchManagers": ["dockerfile"],
-      "matchFiles": ["**/bootc/Containerfile*"],
+      "matchFileNames": ["**/bootc/Containerfile*"],
       "groupName": "bootc base images",
       "automerge": true
     },
     {
       // Track flightctl-agent RPM package
-      "matchManagers": ["regex"],
-      "matchPackageNames": ["flightctl/flightctl"],
+      "matchManagers": ["custom.regex"],
+      "matchPackageNames": ["flightctl-agent"],
       "groupName": "flightctl-agent",
       "automerge": true
     }
@@ -70,8 +65,8 @@
   "prCreation": "immediate",
   "prHourlyLimit": 0,
 
-  // Branch protection
-  "requiredStatusChecks": null,
+  // Ignore test requirements for auto-merge
+  "ignoreTests": true,
 
   // Labels
   "labels": ["dependencies", "renovate"]
