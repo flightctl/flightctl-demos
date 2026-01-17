@@ -151,6 +151,26 @@ jobs:
       options: --privileged
 
     steps:
+      - name: Clone the repository
+        uses: actions/checkout@v4
+
+      - name: Read tags from Containerfile.tags
+        id: read-tags
+        run: |
+          TAGS_FILE="${{ inputs.demo }}/bootc/Containerfile.tags"
+          FILE_TAGS=""
+          if [ -f "$TAGS_FILE" ]; then
+            FILE_TAGS=$(cat "$TAGS_FILE" | tr '\n' ',' | sed 's/,$//')
+          fi
+          if [ -n "${{ inputs.tags }}" ] && [ -n "$FILE_TAGS" ]; then
+            ALL_TAGS="${{ inputs.tags }},${FILE_TAGS}"
+          elif [ -n "${{ inputs.tags }}" ]; then
+            ALL_TAGS="${{ inputs.tags }}"
+          else
+            ALL_TAGS="${FILE_TAGS}"
+          fi
+          echo "all_tags=${ALL_TAGS}" >> $GITHUB_OUTPUT
+
       - name: Install container tools and configure them to attach Sigstore signatures
         run: |
           dnf -y install podman

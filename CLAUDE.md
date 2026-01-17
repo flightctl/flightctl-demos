@@ -22,6 +22,7 @@ Both base images include:
 - cloud-init and open-vm-tools for provisioning
 
 ### Demo Images
+
 The [demos/](demos/) directory contains more specialized demos that build upon base images:
 
 - `basic-nginx-demo` - MicroShift with NGINX deployment
@@ -31,6 +32,7 @@ The [demos/](demos/) directory contains more specialized demos that build upon b
 - `basic-extra-rhel` - Additional RHEL-based demo
 
 ### Directory Structure Per Image
+
 Each image (base or demo) follows this structure:
 
 ```console
@@ -78,7 +80,7 @@ The repository uses the following GitHub Actions workflows for building and publ
 **What it does:**
 
 - Pulls the specified bootc image for both amd64 and arm64 architectures.
-- Uses bootc iamge builder to build `.raw`, `.qcow2`, and `.iso` artifacts for both amd64 and arm64 architectures.
+- Uses bootc image builder to build `.raw`, `.qcow2`, and `.iso` artifacts for both amd64 and arm64 architectures.
 - Signs and publishes these artifacts to the specified registry.
 
 **Build time:** ~5-10 minutes
