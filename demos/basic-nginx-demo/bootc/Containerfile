@@ -1,4 +1,4 @@
-FROM quay.io/flightctl/flightctl-agent-centos:bootstrap
+FROM quay.io/flightctl-demos/centos-bootc:latest
 
 ADD etc etc
 

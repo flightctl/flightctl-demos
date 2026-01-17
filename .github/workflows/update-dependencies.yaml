@@ -1,0 +1,242 @@
+name: Update Dependencies
+
+on:
+  schedule:
+    # Run nightly at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-and-update:
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Clone the repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y skopeo jq curl
+
+      - name: Check for base image updates
+        id: check-images
+        run: |
+          set -e
+          CHANGES_DETECTED=false
+          TIMESTAMP=$(date -u +%Y%m%d%H%M)
+
+          # Function to check and update a base image
+          check_base_image() {
+            local base_dir="$1"
+            local upstream_image="$2"
+            local base_tag="$3"
+            local image_name="$4"
+
+            echo "Checking ${image_name}..."
+
+            # Get current digest from amd64 Containerfile
+            CURRENT_DIGEST=$(grep "FROM.*${upstream_image%:*}.*@sha256:" "${base_dir}/bootc/Containerfile.amd64" | sed 's/.*@sha256://' | cut -d' ' -f1)
+
+            # Get latest digest from registry
+            LATEST_DIGEST=$(skopeo inspect "docker://${upstream_image}" --format '{{.Digest}}' | sed 's/sha256://')
+
+            echo "  Current: ${CURRENT_DIGEST}"
+            echo "  Latest:  ${LATEST_DIGEST}"
+
+            if [ "$CURRENT_DIGEST" != "$LATEST_DIGEST" ]; then
+              echo "  ✓ Update available!"
+              CHANGES_DETECTED=true
+
+              # Update both Containerfile.amd64 and Containerfile.arm64
+              for arch in amd64 arm64; do
+                sed -i "s|FROM ${upstream_image%:*}[^ ]*|FROM ${upstream_image%:*}:${base_tag}@sha256:${LATEST_DIGEST}|" \
+                  "${base_dir}/bootc/Containerfile.${arch}"
+              done
+
+              # Update Containerfile.tags with timestamped tag
+              NEW_TAG="${base_tag}-${TIMESTAMP}"
+              echo "${NEW_TAG}" > "${base_dir}/bootc/Containerfile.tags"
+
+              # Export for later use in updating demo images
+              echo "${image_name}_TAG=${NEW_TAG}" >> $GITHUB_ENV
+              echo "${image_name}_UPDATED=true" >> $GITHUB_ENV
+            else
+              echo "  Already up to date"
+              # Export current tag for demo updates
+              CURRENT_TAG=$(cat "${base_dir}/bootc/Containerfile.tags" 2>/dev/null || echo "latest")
+              echo "${image_name}_TAG=${CURRENT_TAG}" >> $GITHUB_ENV
+              echo "${image_name}_UPDATED=false" >> $GITHUB_ENV
+            fi
+          }
+
+          # Check CentOS bootc base image
+          check_base_image "base/centos-bootc" \
+            "quay.io/centos-bootc/centos-bootc:stream9" \
+            "stream9" \
+            "CENTOS_BOOTC"
+
+          # Check Fedora bootc base image
+          check_base_image "base/fedora-bootc" \
+            "quay.io/fedora/fedora-bootc:43" \
+            "43" \
+            "FEDORA_BOOTC"
+
+          echo "changes_detected=${CHANGES_DETECTED}" >> $GITHUB_OUTPUT
+
+      - name: Check for RPM package updates
+        id: check-rpms
+        run: |
+          set -e
+          CHANGES_DETECTED=false
+
+          # Function to check RPM package version
+          check_rpm_package() {
+            local repo_url="$1"
+            local package_name="$2"
+            local containerfiles="$3"
+            local os_name="$4"
+
+            echo "Checking ${package_name} in ${os_name} repo..."
+
+            # Fetch the primary.xml.gz from repo metadata
+            REPOMD_URL="${repo_url}/repodata/repomd.xml"
+            PRIMARY_PATH=$(curl -sL "${REPOMD_URL}" | grep -oP 'href="\K[^"]*primary\.xml\.gz')
+
+            if [ -n "$PRIMARY_PATH" ]; then
+              # Download and parse primary.xml for latest version
+              LATEST_VERSION=$(curl -sL "${repo_url}/${PRIMARY_PATH}" | \
+                gunzip | grep -A 10 "<name>${package_name}</name>" | \
+                grep -oP '<version epoch="[^"]*" ver="\K[^"]*' | head -1)
+
+              echo "  Latest version: ${LATEST_VERSION}"
+
+              # Check current version in Containerfiles
+              for containerfile in ${containerfiles}; do
+                if [ -f "$containerfile" ]; then
+                  CURRENT_VERSION=$(grep "ARG FLIGHTCTL_VERSION=" "$containerfile" | sed 's/.*=//')
+                  echo "  Current version in $(basename $containerfile): ${CURRENT_VERSION}"
+
+                  if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ] && [ -n "$LATEST_VERSION" ]; then
+                    echo "  ✓ Update available: ${CURRENT_VERSION} -> ${LATEST_VERSION}"
+                    CHANGES_DETECTED=true
+
+                    # Update the ARG line
+                    sed -i "s/ARG FLIGHTCTL_VERSION=.*/ARG FLIGHTCTL_VERSION=${LATEST_VERSION}/" "$containerfile"
+                  fi
+                fi
+              done
+            else
+              echo "  ⚠ Could not fetch repository metadata"
+            fi
+          }
+
+          # Check flightctl-agent in EPEL 9 (for CentOS)
+          check_rpm_package \
+            "https://rpm.flightctl.io/epel/9/x86_64" \
+            "flightctl-agent" \
+            "base/centos-bootc/bootc/Containerfile.amd64 base/centos-bootc/bootc/Containerfile.arm64" \
+            "EPEL 9"
+
+          # Check flightctl-agent in Fedora 43
+          check_rpm_package \
+            "https://rpm.flightctl.io/fedora/43/x86_64" \
+            "flightctl-agent" \
+            "base/fedora-bootc/bootc/Containerfile.amd64 base/fedora-bootc/bootc/Containerfile.arm64" \
+            "Fedora 43"
+
+          echo "changes_detected=${CHANGES_DETECTED}" >> $GITHUB_OUTPUT
+
+      - name: Update demo image references
+        if: steps.check-images.outputs.changes_detected == 'true' || steps.check-rpms.outputs.changes_detected == 'true'
+        run: |
+          set -e
+
+          echo "Updating demo Containerfile FROM statements..."
+
+          # Update demos that use centos-bootc base
+          CENTOS_TAG="${CENTOS_BOOTC_TAG:-latest}"
+          for containerfile in demos/*/bootc/Containerfile demos/*/bootc/*/Containerfile; do
+            if [ -f "$containerfile" ] && grep -q "quay.io/flightctl-demos/centos-bootc" "$containerfile"; then
+              echo "  Updating $(dirname $containerfile) to use centos-bootc:${CENTOS_TAG}"
+              sed -i "s|FROM quay.io/flightctl-demos/centos-bootc[^ ]*|FROM quay.io/flightctl-demos/centos-bootc:${CENTOS_TAG}|" "$containerfile"
+            fi
+          done
+
+          # Update demos that use fedora-bootc base
+          FEDORA_TAG="${FEDORA_BOOTC_TAG:-latest}"
+          for containerfile in demos/*/bootc/Containerfile demos/*/bootc/*/Containerfile; do
+            if [ -f "$containerfile" ] && grep -q "quay.io/flightctl-demos/fedora-bootc" "$containerfile"; then
+              echo "  Updating $(dirname $containerfile) to use fedora-bootc:${FEDORA_TAG}"
+              sed -i "s|FROM quay.io/flightctl-demos/fedora-bootc[^ ]*|FROM quay.io/flightctl-demos/fedora-bootc:${FEDORA_TAG}|" "$containerfile"
+            fi
+          done
+
+      - name: Create Pull Request
+        if: steps.check-images.outputs.changes_detected == 'true' || steps.check-rpms.outputs.changes_detected == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+
+          # Configure git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Create branch
+          BRANCH_NAME="auto/update-dependencies-$(date -u +%Y%m%d-%H%M%S)"
+          git checkout -b "${BRANCH_NAME}"
+
+          # Stage and commit changes
+          git add -A
+
+          # Build commit message
+          COMMIT_MSG="Update dependencies
+
+Automated dependency updates:
+"
+
+          if [ "${CENTOS_BOOTC_UPDATED}" = "true" ]; then
+            COMMIT_MSG="${COMMIT_MSG}
+- Updated base/centos-bootc to ${CENTOS_BOOTC_TAG}"
+          fi
+
+          if [ "${FEDORA_BOOTC_UPDATED}" = "true" ]; then
+            COMMIT_MSG="${COMMIT_MSG}
+- Updated base/fedora-bootc to ${FEDORA_BOOTC_TAG}"
+          fi
+
+          if [ "${{ steps.check-rpms.outputs.changes_detected }}" = "true" ]; then
+            COMMIT_MSG="${COMMIT_MSG}
+- Updated flightctl-agent RPM versions"
+          fi
+
+          git commit -m "${COMMIT_MSG}"
+
+          # Push branch
+          git push origin "${BRANCH_NAME}"
+
+          # Create PR
+          gh pr create \
+            --title "chore: Update dependencies" \
+            --body "This PR updates base images and RPM packages to their latest versions.
+
+## Changes
+$(git log --format='- %s' -1)
+
+Generated by the [update-dependencies workflow](https://github.com/${{ github.repository }}/actions/workflows/update-dependencies.yaml)." \
+            --label "dependencies" \
+            --label "automated"
+
+          echo "✓ Pull request created successfully"
+
+      - name: No updates needed
+        if: steps.check-images.outputs.changes_detected != 'true' && steps.check-rpms.outputs.changes_detected != 'true'
+        run: |
+          echo "✓ All dependencies are up to date"
