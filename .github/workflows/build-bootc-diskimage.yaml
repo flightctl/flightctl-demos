@@ -197,10 +197,10 @@ jobs:
             docker://${OCI_DISK_IMAGE}:${OCI_DISK_IMAGE_TAG}
 
       - name: Tag manifest list with extra tags, push and sign them
-        if: ${{ inputs.tags != '' }}
+        if: ${{ steps.read-tags.outputs.all_tags != '' }}
         run: |
           printf '%s' '${{ secrets.SIGNING_KEY_PRIVATE }}' > ./signingkey.private
-          IFS=',' read -r -a tags <<< "${{ inputs.tags }}"
+          IFS=',' read -r -a tags <<< "${{ steps.read-tags.outputs.all_tags }}"
           for tag in "${tags[@]}"; do
             tag=$(echo "${tag}" | tr -d '[:space:]')
             podman tag ${OCI_DISK_IMAGE}:${OCI_DISK_IMAGE_TAG} ${OCI_DISK_IMAGE}:${tag}

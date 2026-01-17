@@ -38,6 +38,7 @@ image-name/
 ├── bootc/
 │   ├── Containerfile.amd64    # x86_64 container build definition
 │   ├── Containerfile.arm64    # ARM64 container build definition
+│   ├── Containerfile.tags     # Custom tags to apply (e.g., timestamped versions)
 │   └── etc/                   # (demos only) Additional files to include
 ├── deploy/
 │   └── fleet.yaml             # Flight Control fleet definition
@@ -116,20 +117,68 @@ The repository uses the following GitHub Actions workflows for building and publ
 
 **Build time:** ~30+ minutes (includes disk images)
 
-### Automated Dependency Updates (Renovate)
+#### 5. Update Dependencies ([update-dependencies.yaml](.github/workflows/update-dependencies.yaml))
 
-The repository uses Renovate bot ([renovate.json5](.github/renovate.json5)) to automatically update dependencies:
+**Trigger:** Nightly at 2 AM UTC, or manually via workflow_dispatch
 
-**What it tracks:**
+**Purpose:** Automatically detect and update upstream dependencies
 
-- Base container images in Containerfiles (e.g., `quay.io/centos-bootc/centos-bootc:stream9`)
-- GitHub Actions versions (e.g., `actions/checkout@v4`)
+**What it does:**
 
-**Schedule:** Runs nightly (10pm-5am UTC)
+- **Checks base images**: Uses `skopeo` to query OCI registries for new digests of upstream base images
+  - CentOS: `quay.io/centos-bootc/centos-bootc:stream9`
+  - Fedora: `quay.io/fedora/fedora-bootc:43`
+- **Checks RPM packages**: Parses repository metadata from `rpm.flightctl.io` for flightctl-agent updates
+  - EPEL 9 (for CentOS): `https://rpm.flightctl.io/epel/9/x86_64`
+  - Fedora 43: `https://rpm.flightctl.io/fedora/43/x86_64`
+- **Updates files** when changes detected:
+  - Updates `Containerfile.{amd64,arm64}` with new image digests
+  - Updates `ARG FLIGHTCTL_VERSION` with new RPM package versions
+  - Creates timestamped tags in `Containerfile.tags` (format: `stream9-202601171430`)
+  - Updates demo Containerfiles that reference base images to use the new timestamped tags
+- **Creates a single PR** with all updates bundled together for easy review
 
-**Auto-merge:** If CI passes (PR validation workflow), Renovate PRs are automatically merged
+**Build time:** ~2-3 minutes
 
-**PR limits:** Maximum 3 concurrent PRs to avoid overwhelming CI
+### Automated Dependency Management
+
+#### Containerfile.tags
+
+Each image directory contains a `Containerfile.tags` file that specifies custom tags to apply when building that image. This enables:
+
+- **Timestamped versions**: Base images get dated tags (e.g., `stream9-202601171430`) when upstream updates are detected
+- **Reproducible builds**: Demo images can reference specific timestamped base image versions
+- **Audit trail**: Each update creates a unique tag, making it easy to track which version was deployed when
+
+**Format:** Comma-separated list of tags, one per line or all on one line:
+
+```text
+stream9-202601171430
+latest
+```
+
+**How it works:**
+
+1. Build workflows automatically read `Containerfile.tags` when building images
+2. Tags from the file are merged with workflow-provided tags (like `latest` and `${GITHUB_SHA}`)
+3. All tags are applied to both the bootc image and its disk image artifacts
+
+**Nightly update process:**
+
+1. Workflow detects new upstream base image digest using `skopeo inspect`
+2. Updates `Containerfile.{amd64,arm64}` with new `@sha256:...` digest
+3. Generates timestamped tag: `<base-tag>-<YYYYMMDDHHmm>` (e.g., `stream9-202601171430`)
+4. Writes timestamped tag to `Containerfile.tags`
+5. Updates demo images that depend on this base to use the new timestamped tag
+6. Creates PR with all changes
+
+**Example workflow:**
+
+- Upstream `centos-bootc:stream9` gets a new digest
+- Nightly workflow updates `base/centos-bootc/bootc/Containerfile.tags` to `stream9-202601171430`
+- Workflow updates `demos/basic-nginx-demo/bootc/Containerfile` FROM line to use `:stream9-202601171430`
+- On next build, centos-bootc image gets tagged with both `stream9-202601171430` and `latest`
+- Demo images are rebuilt using the specific timestamped version
 
 ### Image Output
 
@@ -141,10 +190,29 @@ Built images are pushed to the OCI registry with the following structure:
   - RAW: `quay.io/flightctl-demos/DEMO_NAME/diskimage-raw:TAG` (OCI artifact)
   - QCoW2: `quay.io/flightctl-demos/DEMO_NAME/diskimage-qcow2:TAG` (OCI image for KubeVirt)
 
+**Available tags:**
+
+- `latest` - Always points to the most recent build from main branch
+- `<commit-sha>` - Git commit SHA (first 8 chars) for the build
+- `<base-tag>-<timestamp>` - Timestamped versions for base images (e.g., `stream9-202601171430`)
+  - Only present when upstream base image was updated
+  - Timestamp format: YYYYMMDDHHmm (year, month, day, hour, minute in UTC)
+  - Allows pinning to specific base image versions for reproducibility
+
+**Example tags for centos-bootc:**
+
+```text
+quay.io/flightctl-demos/centos-bootc:latest
+quay.io/flightctl-demos/centos-bootc:abc12345
+quay.io/flightctl-demos/centos-bootc:stream9-202601171430
+```
+
 ISO and RAW formats are stored as OCI artifacts and must be downloaded using [ORAS](https://oras.land/):
 
 ```bash
 oras pull quay.io/flightctl-demos/centos-bootc/diskimage-iso:latest
+# Or pull a specific timestamped version
+oras pull quay.io/flightctl-demos/centos-bootc/diskimage-iso:stream9-202601171430
 ```
 
 ## Architecture & Key Concepts
@@ -258,17 +326,25 @@ To add a new demo image:
 
 2. Create `bootc/Containerfile.amd64` and `bootc/Containerfile.arm64`:
 
-   - Start FROM an existing base image or upstream bootc image
+   - **Demos must use local base images** (they include the flightctl-agent):
+     - CentOS-based: `FROM quay.io/flightctl-demos/centos-bootc:latest`
+     - Fedora-based: `FROM quay.io/flightctl-demos/fedora-bootc:latest`
    - Install required packages
    - Add configuration files with `ADD` statements
    - Enable systemd services
    - Run `bootc container lint`
 
-3. Create `deploy/fleet.yaml` with appropriate fleet configuration
+3. Create `bootc/Containerfile.tags` with initial tags:
 
-4. (Optional) Add runtime configuration in `configuration/`
+   ```bash
+   echo "latest" > NEW_DEMO/bootc/Containerfile.tags
+   ```
 
-5. Open a PR - the PR validation workflow will automatically build and test your new image. After merge, it will be published to the registry
+4. Create `deploy/fleet.yaml` with appropriate fleet configuration
+
+5. (Optional) Add runtime configuration in `configuration/`
+
+6. Open a PR - the PR validation workflow will automatically build and test your new image. After merge, it will be published to the registry
 
 ## Prerequisites for Building Custom Images
 
