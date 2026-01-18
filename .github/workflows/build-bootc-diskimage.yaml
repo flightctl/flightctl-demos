@@ -170,7 +170,8 @@ jobs:
       - name: Read tags from Containerfile.tags
         id: read-tags
         run: |
-          TAGS_FILE="${{ inputs.demo }}/bootc/Containerfile.tags"
+          DEMO_DIR=$([ -d "base/${{ inputs.demo }}" ] && echo "base/${{ inputs.demo }}" || echo "demos/${{ inputs.demo }}")
+          TAGS_FILE="${DEMO_DIR}/bootc/Containerfile.tags"
           FILE_TAGS=""
           if [ -f "$TAGS_FILE" ]; then
             FILE_TAGS=$(cat "$TAGS_FILE" | tr '\n' ',' | sed 's/,$//')
