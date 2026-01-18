@@ -9,7 +9,7 @@ The repository includes base bootc images that can be used as foundations for cu
 | Image | Description |
 |-------|-------------|
 | [`base/centos-bootc`](base/centos-bootc/) | CentOS Stream 9 bootc base image with Flight Control agent and podman-compose installed. |
-| [`base/fedora-bootc`](base/fedora-bootc/) | Fedora 41 bootc base image with Flight Control agent and podman-compose installed. |
+| [`base/fedora-bootc`](base/fedora-bootc/) | Fedora 43 bootc base image with Flight Control agent and podman-compose installed. |
 
 ## Demo Applications
 
