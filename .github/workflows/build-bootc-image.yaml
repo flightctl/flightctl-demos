@@ -118,15 +118,24 @@ jobs:
       - name: Build bootc image
         run: |
           pushd ${{ inputs.demo }}/bootc
+          # Determine which Containerfile to use
+          if [ -f "Containerfile.${{ env.ARCH }}" ]; then
+            CONTAINERFILE="Containerfile.${{ env.ARCH }}"
+          elif [ -f "Containerfile" ]; then
+            CONTAINERFILE="Containerfile"
+          else
+            echo "Error: No Containerfile found (looked for Containerfile.${{ env.ARCH }} and Containerfile)"
+            exit 1
+          fi
           if [ -n "${AGENT_CONFIG}" ]; then
             echo "${AGENT_CONFIG}" | base64 -d > config.yaml
-            echo -e "\nADD config.yaml /etc/flightctl/\n" >> Containerfile.${{ env.ARCH }}
+            echo -e "\nADD config.yaml /etc/flightctl/\n" >> ${CONTAINERFILE}
           fi
           BUILD_ARGS=""
           if [ -n "${{ inputs.agent-version }}" ]; then
             BUILD_ARGS="--build-arg FLIGHTCTL_VERSION=${{ inputs.agent-version }}"
           fi
-          podman build ${BUILD_ARGS} -t ${OCI_IMAGE}:${OCI_IMAGE_TAG} -f Containerfile.${{ env.ARCH }} .
+          podman build ${BUILD_ARGS} -t ${OCI_IMAGE}:${OCI_IMAGE_TAG} -f ${CONTAINERFILE} .
           popd
 
       - name: Lint bootc image
