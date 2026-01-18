@@ -25,11 +25,9 @@ Both base images include:
 
 The [demos/](demos/) directory contains more specialized demos that build upon base images:
 
-- `basic-nginx-demo` - MicroShift with NGINX deployment
 - `quadlet-wordpress-demo` - WordPress using Podman Quadlet
 - `mlops-pins-fleet` - ML operations demo
 - `inverter-fleet` - IoT inverter management demo
-- `basic-extra-rhel` - Additional RHEL-based demo
 
 ### Directory Structure Per Image
 
@@ -178,9 +176,8 @@ latest
 
 - Upstream `centos-bootc:stream9` gets a new digest
 - Nightly workflow updates `base/centos-bootc/bootc/Containerfile.tags` to `stream9-202601171430`
-- Workflow updates `demos/basic-nginx-demo/bootc/Containerfile` FROM line to use `:stream9-202601171430`
 - On next build, centos-bootc image gets tagged with both `stream9-202601171430` and `latest`
-- Demo images are rebuilt using the specific timestamped version
+- Any demos with bootc images that reference the base would be updated to use the timestamped version
 
 ### Image Output
 
