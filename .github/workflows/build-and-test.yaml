@@ -27,8 +27,8 @@ jobs:
         id: set-output
         run: |
           dirs='${{ steps.changed-dirs.outputs.all_changed_files }}'
-          # Extract parent directory (e.g., base/centos-bootc from base/centos-bootc/bootc)
-          dirs=$(echo "${dirs}" | jq -c 'map(split("/") | .[0:2] | join("/"))')
+          # Extract parent directory of bootc/ (e.g., centos-bootc from base/centos-bootc/bootc)
+          dirs=$(echo "${dirs}" | jq -c 'map(split("/bootc") | .[0] | split("/") | .[-1])')
           echo "changed_images=${dirs}"
           echo "changed_images=${dirs}" >> "$GITHUB_OUTPUT"
 
