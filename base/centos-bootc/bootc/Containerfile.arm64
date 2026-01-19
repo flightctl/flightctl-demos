@@ -3,7 +3,7 @@ FROM quay.io/centos-bootc/centos-bootc:stream9@sha256:fac05dcea297b60878e7446db7
 
 # Add Flight Control agent
 # renovate: datasource=rpm depName=flightctl-agent registryUrl=https://rpm.flightctl.io/epel/9/aarch64/
-ARG FLIGHTCTL_VERSION=1.0.2
+ARG FLIGHTCTL_VERSION=0.10.0
 RUN dnf -y config-manager --add-repo https://rpm.flightctl.io/flightctl-epel.repo && \
     dnf -y install flightctl-agent${FLIGHTCTL_VERSION:+-${FLIGHTCTL_VERSION}} \
       --nodocs --setopt=install_weak_deps=False && \
