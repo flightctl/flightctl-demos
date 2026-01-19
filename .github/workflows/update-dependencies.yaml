@@ -183,10 +183,18 @@ jobs:
             fi
           done
 
+      - name: Generate GitHub App token
+        if: steps.check-images.outputs.changes_detected == 'true' || steps.check-rpms.outputs.changes_detected == 'true'
+        id: generate-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Create Pull Request
         if: steps.check-images.outputs.changes_detected == 'true' || steps.check-rpms.outputs.changes_detected == 'true'
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ steps.generate-token.outputs.token }}
         run: |
           set -e
 
