@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y skopeo jq curl
+          sudo apt-get install -y skopeo jq curl rpm
 
       - name: Check for base image updates
         id: check-images
@@ -123,12 +123,22 @@ jobs:
                   CURRENT_VERSION=$(grep "ARG FLIGHTCTL_VERSION=" "$containerfile" | sed 's/.*=//')
                   echo "  Current version in $(basename $containerfile): ${CURRENT_VERSION}"
 
-                  if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ] && [ -n "$LATEST_VERSION" ]; then
-                    echo "  ✓ Update available: ${CURRENT_VERSION} -> ${LATEST_VERSION}"
-                    CHANGES_DETECTED=true
+                  if [ -n "$LATEST_VERSION" ] && [ -n "$CURRENT_VERSION" ]; then
+                    # Use rpm for proper RPM version comparison
+                    # rpm.vercmp() returns: negative if v1 < v2, 0 if equal, positive if v1 > v2
+                    COMPARISON=$(rpm --eval "%{lua:print(rpm.vercmp('$CURRENT_VERSION', '$LATEST_VERSION'))}")
 
-                    # Update the ARG line
-                    sed -i "s/ARG FLIGHTCTL_VERSION=.*/ARG FLIGHTCTL_VERSION=${LATEST_VERSION}/" "$containerfile"
+                    if [ "$COMPARISON" -lt 0 ]; then
+                      echo "  ✓ Update available: ${CURRENT_VERSION} -> ${LATEST_VERSION}"
+                      CHANGES_DETECTED=true
+
+                      # Update the ARG line
+                      sed -i "s/ARG FLIGHTCTL_VERSION=.*/ARG FLIGHTCTL_VERSION=${LATEST_VERSION}/" "$containerfile"
+                    elif [ "$COMPARISON" -eq 0 ]; then
+                      echo "  Already at latest version"
+                    else
+                      echo "  ⚠ Current version ${CURRENT_VERSION} is newer than repo version ${LATEST_VERSION}"
+                    fi
                   fi
                 fi
               done
@@ -227,8 +237,7 @@ jobs:
           gh pr create \
             --title "chore: Update dependencies" \
             --body-file /tmp/pr-body.md \
-            --label "dependencies" \
-            --label "automated"
+            --label "dependencies"
 
           echo "✓ Pull request created successfully"
 
