@@ -1,5 +1,5 @@
 # renovate: datasource=docker depName=quay.io/fedora/fedora-bootc
-FROM quay.io/fedora/fedora-bootc:43@sha256:d3e4bdec2ae93436922db83a29030a9dddfb15dea6ddb9d90a17381af25f43e4
+FROM quay.io/fedora/fedora-bootc:43@sha256:30d0a50a13fbe8e30dd9592d4e3af7f2ca2f0e78b65b10959a66d054bc807129
 
 # Fix for "no default root filesystem type specified in container"
 RUN mkdir -p /usr/lib/bootc/install && cat <<-'EOF' > /usr/lib/bootc/install/00-fedora.toml
