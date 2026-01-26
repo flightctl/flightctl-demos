@@ -1,5 +1,5 @@
 # renovate: datasource=docker depName=quay.io/centos-bootc/centos-bootc
-FROM quay.io/centos-bootc/centos-bootc:stream9@sha256:3fc5a187654b31e54f60c71916213a7831a1ae4eab177d52eca0d8a2d550eebb
+FROM quay.io/centos-bootc/centos-bootc:stream9@sha256:0a990c06b4f1be2ffd181b7f4594bc1938949d1c6de813ae835d338e58afe2cf
 
 # Add Flight Control agent
 # renovate: datasource=rpm depName=flightctl-agent registryUrl=https://rpm.flightctl.io/epel/9/aarch64/
