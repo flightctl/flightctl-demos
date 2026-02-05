@@ -1,5 +1,5 @@
 # renovate: datasource=docker depName=quay.io/fedora/fedora-bootc
-FROM quay.io/fedora/fedora-bootc:43@sha256:d3e4bdec2ae93436922db83a29030a9dddfb15dea6ddb9d90a17381af25f43e4
+FROM quay.io/fedora/fedora-bootc:43@sha256:8d040512aaecebd77a13cf301db0a131604f715b4f4eb1b22390e2d2b0031b98
 
 # Fix for "no default root filesystem type specified in container"
 RUN mkdir -p /usr/lib/bootc/install && cat <<-'EOF' > /usr/lib/bootc/install/00-fedora.toml
@@ -10,7 +10,7 @@ EOF
 
 # Add Flight Control agent
 # renovate: datasource=rpm depName=flightctl-agent registryUrl=https://rpm.flightctl.io/fedora/43/aarch64/
-ARG FLIGHTCTL_VERSION=1.0.2
+ARG FLIGHTCTL_VERSION=1.1.0~rc1
 RUN dnf -y install dnf5-plugins && \
     dnf -y config-manager addrepo --from-repofile=https://rpm.flightctl.io/flightctl-fedora.repo && \
     dnf -y install flightctl-agent${FLIGHTCTL_VERSION:+-${FLIGHTCTL_VERSION}} \
