@@ -78,7 +78,27 @@ on:
         required: false
 
 jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Clone the repository
+        uses: actions/checkout@v4
+
+      - name: Verify at least one Containerfile exists
+        run: |
+          DEMO_DIR=$([ -d "base/${{ inputs.demo }}" ] && echo "base/${{ inputs.demo }}" || echo "demos/${{ inputs.demo }}")
+          for arch in amd64 arm64; do
+            if [ -f "${DEMO_DIR}/bootc/Containerfile.${arch}" ] || [ -f "${DEMO_DIR}/bootc/Containerfile" ]; then
+              echo "Found Containerfile for ${arch}"
+              exit 0
+            fi
+          done
+          echo "Error: No Containerfile found for any architecture in ${DEMO_DIR}/bootc/"
+          exit 1
+
   build-bootc-images:
+    needs: [preflight]
+
     strategy:
       matrix:
         runner: ["ubuntu-24.04","ubuntu-24.04-arm"]
@@ -98,7 +118,19 @@ jobs:
       - name: Clone the repository
         uses: actions/checkout@v4
 
+      - name: Check if Containerfile exists for this architecture
+        id: check-containerfile
+        run: |
+          DEMO_DIR=$([ -d "base/${{ inputs.demo }}" ] && echo "base/${{ inputs.demo }}" || echo "demos/${{ inputs.demo }}")
+          if [ -f "${DEMO_DIR}/bootc/Containerfile.${{ env.ARCH }}" ] || [ -f "${DEMO_DIR}/bootc/Containerfile" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "No Containerfile found for ${{ env.ARCH }}, skipping build"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Install Podman 5 and configure it to attach Sigstore signatures
+        if: steps.check-containerfile.outputs.exists == 'true'
         run: |
           dnf -y install podman
           tee "/etc/containers/registries.d/${{ inputs.oci-registry }}.yaml" > /dev/null <<EOF
@@ -108,25 +140,25 @@ jobs:
           EOF
 
       - name: Log in to OCI registry
+        if: steps.check-containerfile.outputs.exists == 'true'
         run: podman login -u '${{ secrets.OCI_REGISTRY_USERNAME }}' -p '${{ secrets.OCI_REGISTRY_PASSWORD }}' ${{ inputs.oci-registry }}
 
       - name: Set env vars
+        if: steps.check-containerfile.outputs.exists == 'true'
         run: |
           echo "OCI_IMAGE=${{ inputs.oci-registry }}/${{ inputs.oci-org }}/${{ inputs.demo }}" >> $GITHUB_ENV
           echo "OCI_IMAGE_TAG=${GITHUB_SHA::8}-${{ env.ARCH }}" >> $GITHUB_ENV
 
       - name: Build bootc image
+        if: steps.check-containerfile.outputs.exists == 'true'
         run: |
           DEMO_DIR=$([ -d "base/${{ inputs.demo }}" ] && echo "base/${{ inputs.demo }}" || echo "demos/${{ inputs.demo }}")
           pushd ${DEMO_DIR}/bootc
-          # Determine which Containerfile to use
+          # Determine which Containerfile to use (existence already verified)
           if [ -f "Containerfile.${{ env.ARCH }}" ]; then
             CONTAINERFILE="Containerfile.${{ env.ARCH }}"
-          elif [ -f "Containerfile" ]; then
-            CONTAINERFILE="Containerfile"
           else
-            echo "Error: No Containerfile found (looked for Containerfile.${{ env.ARCH }} and Containerfile)"
-            exit 1
+            CONTAINERFILE="Containerfile"
           fi
           if [ -n "${AGENT_CONFIG}" ]; then
             echo "${AGENT_CONFIG}" | base64 -d > config.yaml
@@ -140,10 +172,11 @@ jobs:
           popd
 
       - name: Lint bootc image
+        if: steps.check-containerfile.outputs.exists == 'true'
         run: podman run --rm ${OCI_IMAGE}:${OCI_IMAGE_TAG} bootc container lint --fatal-warnings --skip var-tmpfiles
 
       - name: Push image to registry and sign it
-        if: ${{ ! inputs.dry_run }}
+        if: steps.check-containerfile.outputs.exists == 'true' && ! inputs.dry_run
         run: |
           printf '%s' '${{ secrets.SIGNING_KEY_PRIVATE }}' > ./signingkey.private
           podman push --sign-by-sigstore-private-key ./signingkey.private ${OCI_IMAGE}:${OCI_IMAGE_TAG}
@@ -199,10 +232,28 @@ jobs:
           echo "OCI_IMAGE=${{ inputs.oci-registry }}/${{ inputs.oci-org }}/${{ inputs.demo }}" >> $GITHUB_ENV
           echo "OCI_IMAGE_TAG=${GITHUB_SHA::8}" >> $GITHUB_ENV
 
+      - name: Detect available architectures
+        id: detect-archs
+        run: |
+          DEMO_DIR=$([ -d "base/${{ inputs.demo }}" ] && echo "base/${{ inputs.demo }}" || echo "demos/${{ inputs.demo }}")
+          ARCHS=""
+          for arch in amd64 arm64; do
+            if [ -f "${DEMO_DIR}/bootc/Containerfile.${arch}" ] || [ -f "${DEMO_DIR}/bootc/Containerfile" ]; then
+              ARCHS="${ARCHS} ${arch}"
+            fi
+          done
+          ARCHS=$(echo "${ARCHS}" | xargs)
+          if [ -z "${ARCHS}" ]; then
+            echo "Error: No Containerfiles found for any architecture"
+            exit 1
+          fi
+          echo "archs=${ARCHS}" >> $GITHUB_OUTPUT
+          echo "Architectures to include in manifest: ${ARCHS}"
+
       - name: Create manifest list
         run: |
           podman manifest create ${OCI_IMAGE}:${OCI_IMAGE_TAG}
-          for arch in amd64 arm64; do
+          for arch in ${{ steps.detect-archs.outputs.archs }}; do
             podman manifest add ${OCI_IMAGE}:${OCI_IMAGE_TAG} docker://${OCI_IMAGE}:${OCI_IMAGE_TAG}-${arch}
           done
 
