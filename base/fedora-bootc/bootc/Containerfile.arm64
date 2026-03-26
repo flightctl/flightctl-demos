@@ -15,7 +15,7 @@ RUN dnf -y install dnf5-plugins \
       --set=baseurl=https://dl.fedoraproject.org/pub/fedora/linux/releases/42/Everything/aarch64/os/ \
       --set=name="Fedora 42" --id=fedora42 && \
     dnf -y install 'greenboot < 0.16.0' \
-      --repo=fedora42 --nodocs --setopt=install_weak_deps=False && \
+      --repo=fedora42 --nodocs --setopt=install_weak_deps=False --setopt=gpgcheck=0 && \
     dnf -y config-manager removerepo --id=fedora42 && \
     dnf clean all && \
     rm -rf /var/{cache,log}
@@ -34,7 +34,7 @@ RUN dnf -y config-manager addrepo --from-repofile=https://rpm.flightctl.io/fligh
 RUN dnf -y install cloud-init open-vm-tools \
       --nodocs --setopt=install_weak_deps=False && \
     dnf clean all && \
-    rm -rf /var/{cache,log} && \
+    rm -rf /var/{cache,log} /run/cloud-init /tmp/* && \
     ln -s ../cloud-init.target /usr/lib/systemd/system/default.target.wants && \
     systemctl enable vmtoolsd.service
 
