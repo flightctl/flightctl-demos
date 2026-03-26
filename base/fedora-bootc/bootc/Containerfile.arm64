@@ -18,7 +18,7 @@ RUN dnf -y install dnf5-plugins \
       --repo=fedora42 --nodocs --setopt=install_weak_deps=False --setopt=gpgcheck=0 && \
     rm -f /etc/yum.repos.d/fedora42.repo && \
     dnf clean all && \
-    rm -rf /var/{cache,log}
+    rm -rf /var/{cache,log} /run/dnf /tmp/*
 
 # Add Flight Control agent
 # renovate: datasource=rpm depName=flightctl-agent registryUrl=https://rpm.flightctl.io/fedora/43/aarch64/
@@ -27,14 +27,14 @@ RUN dnf -y config-manager addrepo --from-repofile=https://rpm.flightctl.io/fligh
     dnf -y install flightctl-agent${FLIGHTCTL_VERSION:+-${FLIGHTCTL_VERSION}} \
       --nodocs --setopt=install_weak_deps=False && \
     dnf clean all && \
-    rm -rf /var/{cache,log} && \
+    rm -rf /var/{cache,log} /run/dnf /tmp/* && \
     systemctl enable flightctl-agent.service
 
 # Add cloud-init and open-vm-tools
 RUN dnf -y install cloud-init open-vm-tools \
       --nodocs --setopt=install_weak_deps=False && \
     dnf clean all && \
-    rm -rf /var/{cache,log} /run/cloud-init /tmp/* && \
+    rm -rf /var/{cache,log} /run/cloud-init /run/dnf /tmp/* && \
     ln -s ../cloud-init.target /usr/lib/systemd/system/default.target.wants && \
     systemctl enable vmtoolsd.service
 
@@ -42,5 +42,5 @@ RUN dnf -y install cloud-init open-vm-tools \
 RUN dnf -y install podman-compose \
       --nodocs --setopt=install_weak_deps=False && \
     dnf clean all && \
-    rm -rf /var/{cache,log} && \
+    rm -rf /var/{cache,log} /run/dnf /tmp/* && \
     systemctl enable podman.service
