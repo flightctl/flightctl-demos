@@ -6,6 +6,10 @@ on:
     - cron: '0 2 * * *'
   workflow_dispatch:
 
+concurrency:
+  group: update-dependencies
+  cancel-in-progress: false
+
 jobs:
   check-and-update:
     runs-on: ubuntu-24.04
@@ -45,15 +49,24 @@ jobs:
             CURRENT_DIGEST=$(grep "FROM.*${upstream_image%:*}.*@sha256:" "${base_dir}/bootc/Containerfile.amd64" | sed 's/.*@sha256://' | cut -d' ' -f1)
 
             # Get latest digest from registry
-            LATEST_DIGEST=$(skopeo inspect "docker://${upstream_image}" --format '{{.Digest}}' | sed 's/sha256://')
+            if ! RAW_DIGEST=$(skopeo inspect "docker://${upstream_image}" --format '{{.Digest}}' 2>/dev/null); then
+              echo "  ⚠ Could not fetch digest from registry, skipping"
+              CURRENT_TAG=$(cat "${base_dir}/bootc/Containerfile.tags" 2>/dev/null || echo "latest")
+              echo "${image_name}_TAG=${CURRENT_TAG}" >> $GITHUB_ENV
+              echo "${image_name}_UPDATED=false" >> $GITHUB_ENV
+              return 0
+            fi
+            LATEST_DIGEST=${RAW_DIGEST#sha256:}
 
             echo "  Current: ${CURRENT_DIGEST}"
             echo "  Latest:  ${LATEST_DIGEST}"
 
             if [ -z "$LATEST_DIGEST" ]; then
-              echo "  ⚠ Could not fetch digest from registry, skipping"
+              echo "  ⚠ Empty digest returned from registry, skipping"
+              CURRENT_TAG=$(cat "${base_dir}/bootc/Containerfile.tags" 2>/dev/null || echo "latest")
+              echo "${image_name}_TAG=${CURRENT_TAG}" >> $GITHUB_ENV
               echo "${image_name}_UPDATED=false" >> $GITHUB_ENV
-              return
+              return 0
             fi
 
             if [ "$CURRENT_DIGEST" != "$LATEST_DIGEST" ]; then
