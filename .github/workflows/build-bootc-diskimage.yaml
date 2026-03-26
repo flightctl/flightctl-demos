@@ -50,7 +50,27 @@ on:
         required: true
 
 jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Clone the repository
+        uses: actions/checkout@v4
+
+      - name: Verify at least one Containerfile exists
+        run: |
+          DEMO_DIR=$([ -d "base/${{ inputs.demo }}" ] && echo "base/${{ inputs.demo }}" || echo "demos/${{ inputs.demo }}")
+          for arch in amd64 arm64; do
+            if [ -f "${DEMO_DIR}/bootc/Containerfile.${arch}" ] || [ -f "${DEMO_DIR}/bootc/Containerfile" ]; then
+              echo "Found Containerfile for ${arch}"
+              exit 0
+            fi
+          done
+          echo "Error: No Containerfile found for any architecture in ${DEMO_DIR}/bootc/"
+          exit 1
+
   build-bootc-disk-images:
+    needs: [preflight]
+
     strategy:
       matrix:
         runner: ["ubuntu-24.04","ubuntu-24.04-arm"]
@@ -67,13 +87,27 @@ jobs:
       - name: Clone the repository
         uses: actions/checkout@v4
 
+      - name: Check if Containerfile exists for this architecture
+        id: check-containerfile
+        run: |
+          DEMO_DIR=$([ -d "base/${{ inputs.demo }}" ] && echo "base/${{ inputs.demo }}" || echo "demos/${{ inputs.demo }}")
+          if [ -f "${DEMO_DIR}/bootc/Containerfile.${{ env.ARCH }}" ] || [ -f "${DEMO_DIR}/bootc/Containerfile" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "No Containerfile found for ${{ env.ARCH }}, skipping disk image build"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Setup Podman 5
+        if: steps.check-containerfile.outputs.exists == 'true'
         uses: ./.github/actions/setup-podman5
 
       - name: Log in to OCI registry
+        if: steps.check-containerfile.outputs.exists == 'true'
         run: podman login -u '${{ secrets.OCI_REGISTRY_USERNAME }}' -p '${{ secrets.OCI_REGISTRY_PASSWORD }}' ${{ inputs.oci-registry }}
 
       - name: Set env vars
+        if: steps.check-containerfile.outputs.exists == 'true'
         run: |
           echo "OCI_IMAGE=${{ inputs.oci-registry }}/${{ inputs.oci-org }}/${{ inputs.demo }}" >> $GITHUB_ENV
           echo "OCI_IMAGE_TAG=${GITHUB_SHA::8}-${{ env.ARCH }}" >> $GITHUB_ENV
@@ -81,6 +115,7 @@ jobs:
           echo "OCI_DISK_IMAGE_TAG=${GITHUB_SHA::8}-${{ env.ARCH }}" >> $GITHUB_ENV
 
       - name: Build disk image
+        if: steps.check-containerfile.outputs.exists == 'true'
         run: |
           mkdir -p "${GITHUB_WORKSPACE}/output"
 
@@ -105,7 +140,7 @@ jobs:
 
       # Upload all formats except QCoW2 as OCI artifact
       - name: Push disk image to registry as OCI artifact and sign it
-        if: ${{ matrix.format != 'qcow2' }}
+        if: steps.check-containerfile.outputs.exists == 'true' && matrix.format != 'qcow2'
         run: |
           printf '%s' '${{ secrets.SIGNING_KEY_PRIVATE }}' > ./signingkey.private
 
@@ -124,7 +159,7 @@ jobs:
 
       # Upload QCoW2 as "containerdisk" OCI image as expected by KubeVirt
       - name: Create the Containerfile for building the containerdisk image
-        if: ${{ matrix.format == 'qcow2' }}
+        if: steps.check-containerfile.outputs.exists == 'true' && matrix.format == 'qcow2'
         run: |
           cat <<EOF > Containerfile.qcow2
           FROM registry.access.redhat.com/ubi9/ubi:latest AS builder
@@ -136,12 +171,12 @@ jobs:
           EOF
 
       - name: Build the containerdisk image
-        if: ${{ matrix.format == 'qcow2' }}
+        if: steps.check-containerfile.outputs.exists == 'true' && matrix.format == 'qcow2'
         run: |
           podman build -t ${OCI_DISK_IMAGE}:${OCI_DISK_IMAGE_TAG} -f Containerfile.qcow2 .
 
       - name: Push the containerdisk image to registry as OCI image and sign it
-        if: ${{ matrix.format == 'qcow2' }}
+        if: steps.check-containerfile.outputs.exists == 'true' && matrix.format == 'qcow2'
         run: |
           printf '%s' '${{ secrets.SIGNING_KEY_PRIVATE }}' > ./signingkey.private
           podman push --sign-by-sigstore-private-key ./signingkey.private ${OCI_DISK_IMAGE}:${OCI_DISK_IMAGE_TAG}
@@ -202,10 +237,28 @@ jobs:
           echo "OCI_DISK_IMAGE=${{ inputs.oci-registry }}/${{ inputs.oci-org }}/${{ inputs.demo }}/diskimage-${{ matrix.format }}" >> $GITHUB_ENV
           echo "OCI_DISK_IMAGE_TAG=${GITHUB_SHA::8}" >> $GITHUB_ENV
 
+      - name: Detect available architectures
+        id: detect-archs
+        run: |
+          DEMO_DIR=$([ -d "base/${{ inputs.demo }}" ] && echo "base/${{ inputs.demo }}" || echo "demos/${{ inputs.demo }}")
+          ARCHS=""
+          for arch in amd64 arm64; do
+            if [ -f "${DEMO_DIR}/bootc/Containerfile.${arch}" ] || [ -f "${DEMO_DIR}/bootc/Containerfile" ]; then
+              ARCHS="${ARCHS} ${arch}"
+            fi
+          done
+          ARCHS=$(echo "${ARCHS}" | xargs)
+          if [ -z "${ARCHS}" ]; then
+            echo "Error: No Containerfiles found for any architecture"
+            exit 1
+          fi
+          echo "archs=${ARCHS}" >> $GITHUB_OUTPUT
+          echo "Architectures to include in manifest: ${ARCHS}"
+
       - name: Create manifest list
         run: |
           podman manifest create ${OCI_DISK_IMAGE}:${OCI_DISK_IMAGE_TAG}
-          for arch in amd64 arm64; do
+          for arch in ${{ steps.detect-archs.outputs.archs }}; do
             podman manifest add --all ${OCI_DISK_IMAGE}:${OCI_DISK_IMAGE_TAG} docker://${OCI_DISK_IMAGE}:${OCI_DISK_IMAGE_TAG}-${arch}
           done
 

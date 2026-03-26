@@ -62,7 +62,7 @@ The repository uses the following GitHub Actions workflows for building and publ
 
 **What it does:**
 
-- Builds a bootc image for the specified demo for both amd64 and arm64 architectures (`demos/DEMO_NAME/bootc/**`)
+- Builds a bootc image for the specified demo for each available architecture (`demos/DEMO_NAME/bootc/**`)
 - Optionally, adds a specified agent config to the image.
 - If `dry_run` is not specified or is `false`, creates a multi-architecture manifest list.
 - If `dry_run` is not specified or is `false`, signs and publishes the manifest list and images to the specified registry.
@@ -77,8 +77,8 @@ The repository uses the following GitHub Actions workflows for building and publ
 
 **What it does:**
 
-- Pulls the specified bootc image for both amd64 and arm64 architectures.
-- Uses bootc image builder to build `.raw`, `.qcow2`, and `.iso` artifacts for both amd64 and arm64 architectures.
+- Pulls the specified bootc image for each available architecture.
+- Uses bootc image builder to build `.raw`, `.qcow2`, and `.iso` artifacts for each available architecture.
 - Signs and publishes these artifacts to the specified registry.
 
 **Build time:** ~5-10 minutes
@@ -92,7 +92,7 @@ The repository uses the following GitHub Actions workflows for building and publ
 **What it does:**
 
 - Detects which bootc images changed (by looking for changes in `**/bootc/**`)
-- Builds changed bootc images for both amd64 and arm64 architectures
+- Builds changed bootc images for each available architecture (skips architectures with no Containerfile)
 - Runs `bootc container lint --fatal-warnings` on built images
 - **Does NOT** build disk images (too slow for PR validation)
 - **Does NOT** push images to registry
@@ -108,9 +108,9 @@ The repository uses the following GitHub Actions workflows for building and publ
 **What it does:**
 
 - Detects which bootc images changed in the merge
-- Builds changed bootc images for both amd64 and arm64 architectures
+- Builds changed bootc images for each available architecture (skips architectures with no Containerfile)
 - Runs `bootc container lint --fatal-warnings` on built images
-- Builds disk images (ISO, RAW, QCoW2) for all architectures
+- Builds disk images (ISO, RAW, QCoW2) for each available architecture
 - Creates multi-architecture manifest lists
 - Signs all images with Sigstore
 - Publishes to quay.io/flightctl-demos with tags: `latest` and `<commit-sha>`
@@ -225,10 +225,10 @@ oras pull quay.io/flightctl-demos/centos-bootc/diskimage-iso:stream9-20260117143
 
 ### Multi-Architecture Support
 
-- All images support both amd64 and arm64 architectures
+- Images can support both amd64 and arm64 architectures, or a single architecture only
 - Separate Containerfiles per architecture allow arch-specific customization
-- GitHub Actions matrix builds both architectures in parallel
-- Final manifest lists reference both architectures
+- GitHub Actions matrix builds both architectures in parallel; runners with no matching Containerfile skip gracefully
+- Final manifest lists include only the architectures that were actually built
 
 ### Flight Control Integration
 
@@ -247,7 +247,7 @@ oras pull quay.io/flightctl-demos/centos-bootc/diskimage-iso:stream9-20260117143
 
 ## Working with Containerfiles
 
-When modifying Containerfile.amd64 or Containerfile.arm64:
+When modifying Containerfiles (e.g. `Containerfile.amd64`, `Containerfile.arm64`):
 
 1. **Package installation**: Always install minimal and clean up package metadata to reduce image size:
 
@@ -272,7 +272,7 @@ When modifying Containerfile.amd64 or Containerfile.arm64:
 
 4. **Linting**: Including `RUN bootc container lint` as the final step is recommended for early feedback during local builds. However, CI workflows enforce linting automatically, so forgotten lints won't slip through
 
-5. **Keep architecture variants in sync**: Changes to one architecture should typically be mirrored to the other unless there's an architecture-specific reason
+5. **Keep architecture variants in sync**: When both architecture Containerfiles exist, changes to one should typically be mirrored to the other unless there's an architecture-specific reason. Single-architecture demos (only `Containerfile.amd64` or `Containerfile.arm64`) are also supported
 
 ## Flight Control Fleet Definitions
 
@@ -323,7 +323,7 @@ To add a new demo image:
    mkdir -p NEW_DEMO/{bootc,deploy,configuration/etc}
    ```
 
-2. Create `bootc/Containerfile.amd64` and `bootc/Containerfile.arm64`:
+2. Create `bootc/Containerfile.amd64` (and optionally `bootc/Containerfile.arm64` if multi-arch is needed):
 
    - **Demos must use local base images** (they include the flightctl-agent):
      - CentOS-based: `FROM quay.io/flightctl-demos/centos-bootc:latest`
@@ -332,6 +332,7 @@ To add a new demo image:
    - Add configuration files with `ADD` statements
    - Enable systemd services
    - Run `bootc container lint`
+   - Only architectures with a matching Containerfile will be built; the manifest list includes only those
 
 3. Create `bootc/Containerfile.tags` with initial tags:
 
