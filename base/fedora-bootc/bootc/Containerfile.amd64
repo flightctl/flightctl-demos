@@ -16,7 +16,7 @@ RUN dnf -y install dnf5-plugins \
       --set=name="Fedora 42" --id=fedora42 && \
     dnf -y install 'greenboot < 0.16.0' \
       --repo=fedora42 --nodocs --setopt=install_weak_deps=False --setopt=gpgcheck=0 && \
-    dnf -y config-manager removerepo --id=fedora42 && \
+    rm -f /etc/yum.repos.d/fedora42.repo && \
     dnf clean all && \
     rm -rf /var/{cache,log}
 
