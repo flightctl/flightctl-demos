@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 # CodeRabbit configuration for flightctl-demos
 # Edge device management demo images: bootc Containerfiles, Flight Control
 # fleet definitions, K8s/OpenShift manifests, GitHub Actions CI/CD, and
