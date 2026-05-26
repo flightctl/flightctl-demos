@@ -1,0 +1,461 @@
+# CodeRabbit configuration for flightctl-demos
+# Edge device management demo images: bootc Containerfiles, Flight Control
+# fleet definitions, K8s/OpenShift manifests, GitHub Actions CI/CD, and
+# demo application code.
+#
+# Schema: https://coderabbit.ai/integrations/schema.v2.json
+# Validate: comment "@coderabbitai configuration" on any PR
+#
+language: "en-US"
+early_access: true
+tone_instructions: >-
+  Balanced reviewer: weigh security, correctness, and design equally.
+  For security findings, state risk severity and impact.
+  For design findings, explain the maintainability or reliability concern.
+  Be direct and specific; cite lines.
+
+reviews:
+  profile: "assertive"
+  request_changes_workflow: true
+  high_level_summary: true
+  high_level_summary_instructions: >-
+    Summarize changes in terms of which areas are affected (base/centos-bootc/,
+    base/fedora-bootc/, demos/*/bootc/, demos/*/configuration/,
+    demos/*/deployment/, demos/*/apps/, .github/workflows/, .github/actions/),
+    whether the change affects base OS images, demo images, fleet definitions,
+    K8s/OpenShift manifests, Quadlet units, CI/CD pipelines, or demo application
+    code, and flag any cross-cutting implications (e.g., base image changes that
+    affect downstream demos).
+  collapse_walkthrough: false
+  sequence_diagrams: true
+
+  path_filters:
+    # Binary / media assets — no useful review signal
+    - "!**/*.pt"
+    - "!**/*.mp4"
+    - "!**/*.png"
+    - "!**/*.svg"
+    - "!**/*.jpg"
+    - "!**/*.jpeg"
+    # Tag files are single-line metadata managed by automation
+    - "!**/Containerfile.tags"
+
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    drafts: false
+    base_branches:
+      - "main"
+      - "release/.*"
+    ignore_title_keywords:
+      - "[skip-review]"
+      - "WIP"
+
+  labeling_instructions:
+    - label: "base-images"
+      instructions: >-
+        Apply when the PR modifies files in base/. Changes here affect the
+        base OS images that all demo images build upon.
+
+    - label: "demos"
+      instructions: >-
+        Apply when the PR modifies files in demos/. Changes here affect
+        demo images, fleet definitions, K8s manifests, or application code.
+
+    - label: "ci"
+      instructions: >-
+        Apply when the PR modifies files in .github/. Changes here affect
+        CI/CD workflows, composite actions, or pipeline scripts.
+
+    - label: "configuration"
+      instructions: >-
+        Apply when the PR modifies files in **/configuration/ or
+        **/deployment/ directories. Changes here affect runtime
+        configuration, K8s manifests, or fleet definitions.
+
+  path_instructions:
+
+    # ── bootc Containerfiles (base images) ───────────────────────
+    - path: "base/**/Containerfile*"
+      instructions: |
+        bootc base image review — security AND design:
+
+        Security:
+        - Pin upstream base images by digest (@sha256:…)
+        - No secrets in ENV, ARG, or COPY
+        - No package manager cache in final layer (dnf clean all)
+        - Verify --nodocs --setopt=install_weak_deps=False on dnf install
+        - No curl-pipe-bash patterns for package installation
+
+        Design & correctness:
+        - Each RUN should install one logical group of packages and clean
+          up in the same layer to keep image size minimal
+        - systemctl enable must match installed service names exactly
+        - Changes to one arch Containerfile should be mirrored to the
+          other unless there is an arch-specific reason not to
+        - ARG declarations used for version pinning should have clear
+          renovate comments for automated dependency updates
+        - bootc container lint should be the final RUN step (or note
+          that CI enforces it if omitted)
+
+    # ── bootc Containerfiles (demo images) ───────────────────────
+    - path: "demos/**/bootc/Containerfile*"
+      instructions: |
+        bootc demo image review — security AND design:
+
+        Security:
+        - Demo images MUST use local base images from
+          quay.io/flightctl-demos/ (centos-bootc or fedora-bootc),
+          not upstream base images directly
+        - Pin third-party images by digest; flightctl-demos bases may
+          use floating tags (they are rebuilt nightly)
+        - No secrets in ENV, ARG, or COPY
+        - No package manager cache in final layer
+        - No curl-pipe-bash patterns for package installation
+
+        Design & correctness:
+        - Minimize layer count; combine related operations
+        - COPY specific files, not entire directories when possible
+        - Enable only the systemd services the demo actually needs
+        - Clean up build-time artifacts (cache, tmp, logs) in the same
+          RUN layer that creates them
+        - If the demo installs an application, verify the ENTRYPOINT/CMD
+          is correct and the app will start on boot
+
+    # ── Demo application Containerfiles ──────────────────────────
+    - path: "demos/**/apps/**/Containerfile*"
+      instructions: |
+        Application container image review — security AND design:
+
+        Security:
+        - Pin base images by digest or specific version tag
+        - USER non-root when possible; justify if running as root
+        - No secrets or credentials in ENV, ARG, or COPY
+        - No package manager cache in final layer
+        - Validate git clone targets — only trusted, pinned sources
+        - pip install: prefer pinned versions and --no-cache-dir
+
+        Design & correctness:
+        - Multi-stage builds preferred to keep final image minimal
+        - COPY/ADD only required files; avoid copying the entire context
+        - WORKDIR should be set before file operations
+        - ENTRYPOINT + CMD should be correct for the application
+        - Environment variables with hostnames/ports should use
+          reasonable defaults that work in the demo context
+
+    # ── Flight Control fleet definitions ─────────────────────────
+    - path: "**/fleet.yaml"
+      instructions: |
+        Flight Control Fleet manifest review:
+
+        Security:
+        - Image references should use a specific tag or digest, not
+          just :latest in production fleet definitions
+        - No secrets or credentials in inline config values
+        - gitRef repositories should reference trusted sources
+
+        Design & correctness:
+        - apiVersion should be flightctl.io/v1beta1
+        - kind must be Fleet
+        - selector.matchLabels must align with template.metadata.labels
+        - os.image must reference a valid image from the registry
+        - systemd.matchPatterns should list only services the fleet
+          actually manages
+        - config entries should use gitRef for large configs and inline
+          only for small, stable values
+        - Verify path references in gitRef configs point to valid
+          directories in the referenced repository
+
+    # ── Kubernetes / OpenShift manifests ─────────────────────────
+    - path: "demos/**/configuration/**/*.yaml"
+      instructions: |
+        Kubernetes/OpenShift manifest review — security AND design:
+
+        Security:
+        - securityContext: prefer runAsNonRoot, readOnlyRootFilesystem,
+          allowPrivilegeEscalation: false
+        - Drop ALL capabilities, add only what is required
+        - Flag privileged: true, hostPID, hostNetwork, hostIPC — these
+          may be legitimate for edge/IoT demos with hardware access
+          but should be explicitly justified
+        - SCC: prefer restricted; broad SCCs (RunAsAny, allowedCapabilities: '*')
+          should carry a comment explaining why
+        - No plaintext passwords or credentials in Environment fields;
+          flag and suggest Kubernetes Secrets
+        - Image references should use specific tags or digests
+
+        Design & correctness:
+        - Resource requests/limits should be defined on containers
+        - Labels and selectors must be consistent across related objects
+          (Deployment, Service, Route)
+        - Kustomization.yaml should list all resources in the directory
+        - Namespace definitions should precede resources that use them
+        - Services should correctly target container ports
+        - Verify volumeMounts match declared volumes
+
+    # ── Podman Quadlet / systemd unit files ──────────────────────
+    - path: "**/*.{container,volume,network,kube,image}"
+      instructions: |
+        Podman Quadlet unit file review — security AND design:
+
+        Security:
+        - No plaintext passwords in Environment= lines; flag and
+          suggest podman secrets or environment files
+        - Container images should use specific version tags, not
+          :latest for third-party images
+        - PublishPort: verify only necessary ports are exposed;
+          prefer binding to 127.0.0.1 when external access is not needed
+
+        Design & correctness:
+        - [Unit] ordering: Requires= and After= dependencies should
+          be correct (e.g., app depends on db)
+        - [Container] section: ContainerName, Image, Network, Volume
+          should be consistent across related units
+        - Volume names in .container files must match .volume file names
+        - Network names must match .network file names
+        - [Install] WantedBy should include appropriate targets
+        - Verify Label= values are consistent for related containers
+
+    # ── GitHub Actions workflows ─────────────────────────────────
+    - path: ".github/workflows/**/*.yaml"
+      instructions: |
+        GitHub Actions workflow review — security AND design:
+
+        Security:
+        - Pin actions by full commit SHA, not floating tag
+        - No secrets in logs; mask sensitive outputs
+        - Least privilege: minimize GITHUB_TOKEN permissions; declare
+          explicit permissions block
+        - No pull_request_target with checkout of PR head
+        - Secrets should be accessed via ${{ secrets.NAME }}, never
+          echoed or written to files without cleanup
+        - Signing keys written to disk must be cleaned up after use
+        - Verify shell commands do not inject untrusted input
+          (${{ inputs.* }}, ${{ github.event.* }}) unsanitized
+
+        Design & correctness:
+        - Reusable workflows (workflow_call) should have clear input
+          descriptions and sensible defaults
+        - Matrix strategies should fail-fast: false only when builds
+          are independent (e.g., multi-arch)
+        - Job dependencies (needs:) should form a correct DAG
+        - Conditional steps (if:) should handle edge cases (empty
+          inputs, missing files)
+        - Steps that parse files should handle missing/empty files
+          gracefully
+        - Environment variable composition should be correct (proper
+          quoting, correct GITHUB_OUTPUT syntax)
+        - DRY: repeated logic across workflows should use composite
+          actions or reusable workflows
+
+    # ── GitHub Actions composite actions ─────────────────────────
+    - path: ".github/actions/**/*.yaml"
+      instructions: |
+        Composite action review:
+
+        Security:
+        - Commands run with sudo should be justified
+        - No secrets or credentials in action definitions
+
+        Design & correctness:
+        - using: must be "composite"
+        - Steps should be idempotent where possible
+        - Shell commands should handle errors (set -e or explicit checks)
+        - Actions should be self-contained and reusable
+
+    # ── Shell scripts ────────────────────────────────────────────
+    - path: "**/*.sh"
+      instructions: |
+        Shell script review — security AND design:
+
+        Security:
+        - No eval or source of untrusted input
+        - Quote all variable expansions ("$VAR", not $VAR)
+        - No curl-pipe-bash patterns
+
+        Design & correctness:
+        - Include a shebang line (#!/bin/bash or #!/bin/sh)
+        - Use set -euo pipefail for bash scripts (or equivalent
+          error handling for /bin/sh)
+        - Exit codes should be meaningful
+        - Scripts should be idempotent when reasonable
+
+    # ── Python application code ──────────────────────────────────
+    - path: "**/*.py"
+      instructions: |
+        Python review — security AND design:
+
+        Security:
+        - No hardcoded secrets (API keys, passwords, secret_key values)
+        - No pickle.loads or yaml.load without SafeLoader on untrusted data
+        - No shell=True, os.system, or eval with user input
+        - Flask: debug=False in production; no allow_unsafe_werkzeug
+          in production deployments
+        - Validate and sanitize any data from environment variables
+          or user input before use
+
+        Design & correctness:
+        - Imports should be organized (stdlib, third-party, local)
+        - Functions should have clear responsibilities
+        - Error handling: don't silently swallow exceptions (bare
+          except/pass) or sys.exit without logging
+        - Resource cleanup: files, sockets, video captures should be
+          properly closed (with statements or try/finally)
+        - Configuration (hosts, ports) should come from environment
+          variables with sensible defaults
+
+    # ── JavaScript ───────────────────────────────────────────────
+    - path: "**/*.js"
+      instructions: |
+        JavaScript review — security AND design:
+
+        Security:
+        - No eval(), new Function(), or document.write with dynamic data
+        - No innerHTML assignment with untrusted content
+        - WebSocket URLs should not be hardcoded to specific hostnames;
+          prefer deriving from window.location or configuration
+
+        Design & correctness:
+        - Use const/let, not var
+        - Add error handling for network operations (WebSocket, fetch)
+        - Event listeners should handle connection lifecycle (open,
+          error, close) with appropriate user feedback
+        - Avoid magic numbers; use named constants
+
+    # ── HTML templates ───────────────────────────────────────────
+    - path: "**/*.html"
+      instructions: |
+        HTML template review:
+
+        Security:
+        - No inline scripts with user-controlled data
+        - External resources should use HTTPS, not HTTP
+        - No inline event handlers (onclick, etc.) with dynamic values
+
+        Design & correctness:
+        - Valid HTML5 structure (doctype, html, head, body)
+        - Responsive meta viewport tag
+        - Accessible: images should have alt text, form inputs
+          should have labels
+        - Template variables should use auto-escaping (Jinja2 default)
+
+    # ── CSS ──────────────────────────────────────────────────────
+    - path: "**/*.css"
+      instructions: |
+        CSS review:
+        - No url() references to external untrusted domains
+        - Use relative units (rem, em, %) for responsive layouts
+        - Avoid !important except to override third-party styles
+
+    # ── Supply chain & dependencies ──────────────────────────────
+    - path: "**/{requirements*.txt,Pipfile*,pyproject.toml,package*.json}"
+      instructions: |
+        Supply chain security:
+        - New dependencies: justify the need, check license compatibility
+        - Pin exact versions (==, not >= or ~=)
+        - Flag known CVEs (cross-ref osv.dev)
+        - No pre-release or yanked versions in production
+        - SBOM: ensure build produces provenance attestations
+
+    # ── CI/CD pipeline scripts ───────────────────────────────────
+    - path: ".github/workflow-scripts/**/*"
+      instructions: |
+        CI/CD helper script review:
+
+        Security:
+        - Scripts run in CI have access to secrets — verify they do
+          not leak them via stdout/stderr
+        - No untrusted input flows into shell commands unsanitized
+
+        Design & correctness:
+        - Exit codes should correctly signal pass/fail to the workflow
+        - Scripts should be minimal and focused on one task
+        - Use POSIX-compatible constructs if shebang is #!/bin/sh
+
+  # ── Security scanners ────────────────────────────────────────
+  tools:
+    gitleaks:
+      enabled: true
+    semgrep:
+      enabled: true
+    checkov:
+      enabled: true
+    hadolint:
+      enabled: true
+    actionlint:
+      enabled: true
+    yamllint:
+      enabled: true
+    markdownlint:
+      enabled: true
+    ast-grep:
+      essential_rules: true
+
+  # ── Pre-merge checks (hard gates) ───────────────────────────
+  pre_merge_checks:
+    description:
+      mode: "warning"
+    custom_checks:
+      - name: "no-hardcoded-secrets"
+        instructions: |
+          Flag hardcoded secrets: API keys, tokens, passwords, private
+          keys, credentials. Also flag base64 strings >32 chars in config,
+          URLs with embedded credentials, variables named api_key/secret/
+          token/password assigned string literals. In Quadlet files, flag
+          plaintext passwords in Environment= lines.
+        mode: "error"
+
+      - name: "no-injection-vectors"
+        instructions: |
+          Flag shell injection in GitHub Actions workflows: unsanitized
+          ${{ inputs.* }} or ${{ github.event.* }} in run: blocks.
+          Flag eval/exec on untrusted data in Python. Flag shell=True
+          or os.system with variables.
+        mode: "error"
+
+      - name: "container-image-provenance"
+        instructions: |
+          Flag Containerfile FROM lines that reference third-party images
+          without a digest pin (@sha256:...) or specific version tag.
+          Exception: quay.io/flightctl-demos/* images may use floating
+          tags since they are rebuilt nightly with pinned upstreams.
+        mode: "error"
+
+      - name: "arch-containerfile-consistency"
+        instructions: |
+          When both Containerfile.amd64 and Containerfile.arm64 exist
+          for an image, verify that substantive changes (package lists,
+          service enablement, configuration) are consistent across both
+          unless the PR description explains an arch-specific reason.
+        mode: "warning"
+
+      - name: "no-sensitive-data-in-logs"
+        instructions: |
+          Flag logging or echo statements that may expose passwords,
+          tokens, API keys, signing keys, or registry credentials.
+          Especially in GitHub Actions run: blocks.
+        mode: "error"
+
+      - name: "ai-attribution"
+        instructions: |
+          If AI tools were used (mentioned in PR or commits), verify
+          Red Hat attribution: Assisted-by or Generated-by trailers.
+          Flag use of Co-Authored-By for AI tools.
+        mode: "warning"
+
+# ── Knowledge base ───────────────────────────────────────────
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    filePatterns:
+      - "**/CLAUDE.md"
+      - "**/AGENTS.md"
+      - "**/CONTRIBUTING.md"
+      - "**/README.md"
+
+  issues:
+    scope: "auto"
+  pull_requests:
+    scope: "auto"
+  learnings:
+    scope: "auto"
