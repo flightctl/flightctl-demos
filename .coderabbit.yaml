@@ -108,8 +108,10 @@ reviews:
         - Demo images MUST use local base images from
           quay.io/flightctl-demos/ (centos-bootc or fedora-bootc),
           not upstream base images directly
-        - Pin third-party images by digest; flightctl-demos bases may
-          use floating tags (they are rebuilt nightly)
+        - Pin third-party images by digest
+        - flightctl-demos base images should use digests or the
+          timestamped tags produced by Containerfile.tags; flag generic
+          floating tags such as :latest
         - No secrets in ENV, ARG, or COPY
         - No package manager cache in final layer
         - No curl-pipe-bash patterns for package installation
@@ -400,10 +402,11 @@ reviews:
       - name: "no-hardcoded-secrets"
         instructions: |
           Flag hardcoded secrets: API keys, tokens, passwords, private
-          keys, credentials. Also flag base64 strings >32 chars in config,
-          URLs with embedded credentials, variables named api_key/secret/
-          token/password assigned string literals. In Quadlet files, flag
-          plaintext passwords in Environment= lines.
+          keys, credentials. Flag long encoded strings only when they
+          appear in credential-bearing fields or match known secret
+          formats (JWT, PEM headers, base64 in api_key/secret/token/
+          password variables). Flag URLs with embedded credentials. In
+          Quadlet files, flag plaintext passwords in Environment= lines.
         mode: "error"
 
       - name: "no-injection-vectors"
@@ -416,10 +419,13 @@ reviews:
 
       - name: "container-image-provenance"
         instructions: |
-          Flag Containerfile FROM lines that reference third-party images
-          without a digest pin (@sha256:...) or specific version tag.
-          Exception: quay.io/flightctl-demos/* images may use floating
-          tags since they are rebuilt nightly with pinned upstreams.
+          Flag base/**/Containerfile* FROM lines unless the upstream
+          image is pinned by digest (@sha256:...).
+          Flag other third-party Containerfile FROM lines unless they
+          use either a digest pin or a specific immutable version tag.
+          Exception: quay.io/flightctl-demos/* images may use digests or
+          the timestamped tags produced by this repo's automation.
+          Generic floating tags such as :latest should still be flagged.
         mode: "error"
 
       - name: "arch-containerfile-consistency"
