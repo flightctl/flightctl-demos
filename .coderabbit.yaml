@@ -168,7 +168,7 @@ reviews:
           directories in the referenced repository
 
     # ── Kubernetes / OpenShift manifests ─────────────────────────
-    - path: "demos/**/configuration/**/*.yaml"
+    - path: "demos/**/{configuration,deployment}/**/*.yaml"
       instructions: |
         Kubernetes/OpenShift manifest review — security AND design:
 
@@ -452,7 +452,7 @@ knowledge_base:
       - "**/CLAUDE.md"
       - "**/AGENTS.md"
       - "**/CONTRIBUTING.md"
-      - "**/README.md"
+      - "README.md"
 
   issues:
     scope: "auto"
