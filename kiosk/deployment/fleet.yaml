@@ -52,5 +52,4 @@ spec:
           gitRef:
             repository: flightctl-demos
             targetRevision: fc-kiosk
-            path: /kiosk/kiosk-script/gnome-kiosk-script
-            mountPath: /root/.local/bin/
+            path: /kiosk/kiosk-script
