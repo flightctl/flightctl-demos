@@ -1,4 +1,4 @@
-FROM quay.io/centos-bootc/centos-bootc:stream9
+FROM quay.io/centos-bootc/centos-bootc:stream9@sha256:d2f16dce29207766d73361af7209e64a967f5622e8f3d1da157a2a92ab794d95
 
 RUN sed -i 's/^SELINUX=enforcing/SELINUX=permissive/' /etc/selinux/config
 
@@ -41,4 +41,3 @@ COPY kiosk-autologin-setup.service /usr/lib/systemd/system/kiosk-autologin-setup
 
 # Enable the one-shot service so it runs at first boot
 RUN systemctl enable kiosk-autologin-setup.service
-

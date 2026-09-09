@@ -81,25 +81,41 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Podman 5 and configure it to attach Sigstore signatures
+        env:
+          OCI_REGISTRY: ${{ inputs.oci-registry }}
         run: |
           dnf -y install podman
-          tee "/etc/containers/registries.d/${{ inputs.oci-registry }}.yaml" > /dev/null <<EOF
+          tee "/etc/containers/registries.d/${OCI_REGISTRY}.yaml" > /dev/null <<EOF
             docker:
-              ${{ inputs.oci-registry }}:
+              ${OCI_REGISTRY}:
                 use-sigstore-attachments: true
           EOF
 
       - name: Log in to OCI registry
-        run: podman login -u '${{ secrets.OCI_REGISTRY_USERNAME }}' -p '${{ secrets.OCI_REGISTRY_PASSWORD }}' ${{ inputs.oci-registry }}
+        env:
+          OCI_REGISTRY: ${{ inputs.oci-registry }}
+          OCI_USERNAME: ${{ secrets.OCI_REGISTRY_USERNAME }}
+          OCI_PASSWORD: ${{ secrets.OCI_REGISTRY_PASSWORD }}
+        run: printf '%s' "$OCI_PASSWORD" | podman login --username "$OCI_USERNAME" --password-stdin "$OCI_REGISTRY"
 
       - name: Set env vars
+        env:
+          OCI_REGISTRY: ${{ inputs.oci-registry }}
+          OCI_ORG: ${{ inputs.oci-org }}
+          DEMO: ${{ inputs.demo }}
         run: |
-          echo "OCI_IMAGE=${{ inputs.oci-registry }}/${{ inputs.oci-org }}/${{ inputs.demo }}" >> $GITHUB_ENV
+          printf 'OCI_IMAGE=%s/%s/%s\n' "$OCI_REGISTRY" "$OCI_ORG" "$DEMO" >> "$GITHUB_ENV"
           echo "OCI_IMAGE_TAG=${GITHUB_SHA::8}-${{ env.ARCH }}" >> $GITHUB_ENV
 
       - name: Build bootc image
+        env:
+          DEMO: ${{ inputs.demo }}
         run: |
-          pushd ${{ inputs.demo }}/bootc
+          case "$DEMO" in
+            [A-Za-z0-9._-]*) ;;
+            *) echo "invalid demo name" >&2; exit 1 ;;
+          esac
+          pushd -- "$DEMO/bootc"
           if [ -n "${AGENT_CONFIG}" ]; then
             echo "${AGENT_CONFIG}" | base64 -d > config.yaml
             echo -e "\nADD config.yaml /etc/flightctl/\n" >> Containerfile.${{ env.ARCH }}
@@ -124,20 +140,30 @@ jobs:
 
     steps:
       - name: Install container tools and configure them to attach Sigstore signatures
+        env:
+          OCI_REGISTRY: ${{ inputs.oci-registry }}
         run: |
           dnf -y install podman
-          tee "/etc/containers/registries.d/${{ inputs.oci-registry }}.yaml" > /dev/null <<EOF
+          tee "/etc/containers/registries.d/${OCI_REGISTRY}.yaml" > /dev/null <<EOF
             docker:
-              ${{ inputs.oci-registry }}:
+              ${OCI_REGISTRY}:
                 use-sigstore-attachments: true
           EOF
 
       - name: Log in to OCI registry
-        run: podman login -u '${{ secrets.OCI_REGISTRY_USERNAME }}' -p '${{ secrets.OCI_REGISTRY_PASSWORD }}' ${{ inputs.oci-registry }}
+        env:
+          OCI_REGISTRY: ${{ inputs.oci-registry }}
+          OCI_USERNAME: ${{ secrets.OCI_REGISTRY_USERNAME }}
+          OCI_PASSWORD: ${{ secrets.OCI_REGISTRY_PASSWORD }}
+        run: printf '%s' "$OCI_PASSWORD" | podman login --username "$OCI_USERNAME" --password-stdin "$OCI_REGISTRY"
 
       - name: Set env vars
+        env:
+          OCI_REGISTRY: ${{ inputs.oci-registry }}
+          OCI_ORG: ${{ inputs.oci-org }}
+          DEMO: ${{ inputs.demo }}
         run: |
-          echo "OCI_IMAGE=${{ inputs.oci-registry }}/${{ inputs.oci-org }}/${{ inputs.demo }}" >> $GITHUB_ENV
+          printf 'OCI_IMAGE=%s/%s/%s\n' "$OCI_REGISTRY" "$OCI_ORG" "$DEMO" >> "$GITHUB_ENV"
           echo "OCI_IMAGE_TAG=${GITHUB_SHA::8}" >> $GITHUB_ENV
 
       - name: Create manifest list
@@ -157,11 +183,17 @@ jobs:
 
       - name: Tag manifest list with extra tags, push and sign them
         if: ${{ inputs.tags != '' }}
+        env:
+          TAGS: ${{ inputs.tags }}
         run: |
           printf '%s' '${{ secrets.SIGNING_KEY_PRIVATE }}' > ./signingkey.private
-          IFS=',' read -r -a tags <<< "${{ inputs.tags }}"
+          IFS=',' read -r -a tags <<< "$TAGS"
           for tag in "${tags[@]}"; do
             tag=$(echo "${tag}" | tr -d '[:space:]')
+            case "$tag" in
+              [A-Za-z0-9._-]*) ;;
+              *) echo "invalid image tag" >&2; exit 1 ;;
+            esac
             podman tag ${OCI_IMAGE}:${OCI_IMAGE_TAG} ${OCI_IMAGE}:${tag}
             podman manifest push --all \
               --sign-by-sigstore-private-key ./signingkey.private \

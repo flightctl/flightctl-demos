@@ -19,7 +19,7 @@ else
   URL="$DEFAULT_URL"
 fi
 
-echo "[kiosk] Launching: $BROWSER -kiosk $URL"
+echo "[kiosk] Launching: $BROWSER -kiosk"
 "$BROWSER" -kiosk "$URL"
 
 sleep 1.0
