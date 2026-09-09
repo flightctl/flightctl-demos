@@ -9,10 +9,10 @@ spec:
   template:
     metadata:
       labels:
-        demo-revision: "11"
+        demo-revision: "12"
     spec:
       os:
-        image: quay.io/atraeger/fc-kiosk:v3
+        image: quay.io/flightctl/flightctl-device:base-fedora-bootc-v1.4.0-main-86-g9a4353536
       applications:
         - name: kiosk-app
           appType: compose
