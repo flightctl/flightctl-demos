@@ -5,4 +5,4 @@ metadata:
 spec:
   repository: flightctl-demos
   path: /kiosk/deployment/fleet.yaml
-  targetRevision: main
+  targetRevision: fc-kiosk

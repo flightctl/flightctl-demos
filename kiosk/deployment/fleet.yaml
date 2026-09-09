@@ -9,7 +9,7 @@ spec:
   template:
     spec:
       os:
-        image: quay.io/flightctl-demos/kiosk:v1
+        image: quay.io/atraeger/fc-kiosk:v1
       applications:
         - name: kiosk-app
           appType: compose
@@ -32,7 +32,7 @@ spec:
           inline:
             - path: /etc/flightctl/hooks.d/afterupdating/10-restart-gdm.yaml
               content: |-
-                - run: /usr/bin/systemctl restart lightdm
+                - run: /usr/bin/systemctl restart gdm
                   timeout: 10s
                   if:
                     - path: /etc/kiosk-mode/bin/url.conf
@@ -46,12 +46,12 @@ spec:
         - name: kiosk-content
           gitRef:
             repository: kiosk-content
-            targetRevision: e66a03e
+            targetRevision: v1
             path: /{{ .metadata.labels.region }}/var/kiosk/catalog
             mountPath: /var/kiosk/catalog
         - name: gnome-kiosk-script
           gitRef:
             repository: flightctl-demos
-            targetRevision: main
+            targetRevision: fc-kiosk
             path: /kiosk/kiosk-script/gnome-kiosk-script
             mountPath: /root/.local/bin/
