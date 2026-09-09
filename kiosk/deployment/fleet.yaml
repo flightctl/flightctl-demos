@@ -9,7 +9,7 @@ spec:
   template:
     spec:
       os:
-        image: quay.io/flightctl-demos/kiosk:latest
+        image: quay.io/flightctl-demos/kiosk:v1
       applications:
         - name: kiosk-app
           appType: compose
@@ -28,9 +28,9 @@ spec:
                       - "8080:8080"
           envVars: {}
       config:
-        - name: lightdm-refresh-hook
+        - name: gdm-refresh-hook
           inline:
-            - path: /etc/flightctl/hooks.d/afterupdating/10-restart-lightdm.yaml
+            - path: /etc/flightctl/hooks.d/afterupdating/10-restart-gdm.yaml
               content: |-
                 - run: /usr/bin/systemctl restart lightdm
                   timeout: 10s
@@ -46,7 +46,7 @@ spec:
         - name: kiosk-content
           gitRef:
             repository: kiosk-content
-            targetRevision: v1
+            targetRevision: e66a03e
             path: /{{ .metadata.labels.region }}/var/kiosk/catalog
             mountPath: /var/kiosk/catalog
         - name: gnome-kiosk-script

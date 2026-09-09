@@ -5,3 +5,11 @@ metadata:
 spec:
   type: git
   url: https://github.com/avishayt/fc-kiosk.git
+---
+apiVersion: flightctl.io/v1beta1
+kind: Repository
+metadata:
+  name: flightctl-demos
+spec:
+  type: git
+  url: https://github.com/flightctl/flightctl-demos.git
