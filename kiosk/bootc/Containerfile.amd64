@@ -21,11 +21,6 @@ RUN dnf -y install epel-release dnf-plugins-core && \
     rm -rf /var/{cache,log} /var/lib/{dnf,rhsm} && \
     systemctl enable podman.service
 
-COPY flightctl_rsa.pub /usr/etc-system/root.keys
-RUN touch /etc/ssh/sshd_config.d/30-auth-system.conf; \
-    mkdir -p /usr/etc-system/; \
-    echo 'AuthorizedKeysFile /usr/etc-system/%u.keys' >> /etc/ssh/sshd_config.d/30-auth-system.conf; \
-    chmod 0600 /usr/etc-system/root.keys
 VOLUME /var/roothome
 
 # Add browser, kiosk UI, and other tools.
