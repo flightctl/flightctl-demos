@@ -9,7 +9,7 @@ spec:
   template:
     metadata:
       labels:
-        demo-revision: "7"
+        demo-revision: "8"
     spec:
       os:
         image: quay.io/atraeger/fc-kiosk:v1
@@ -31,6 +31,12 @@ spec:
                       - "8080:8080"
           envVars: {}
       config:
+        - name: disable-selinux-for-demo
+          inline:
+            - path: /etc/selinux/config
+              content: |
+                SELINUX=disabled
+                SELINUXTYPE=targeted
         - name: gdm-refresh-hook
           inline:
             - path: /etc/flightctl/hooks.d/afterupdating/10-restart-gdm.yaml
