@@ -9,7 +9,7 @@ spec:
   template:
     metadata:
       labels:
-        demo-revision: "12"
+        demo-revision: "13"
     spec:
       os:
         image: quay.io/flightctl/flightctl-device:base-fedora-bootc-v1.4.0-main-86-g9a4353536
@@ -31,17 +31,6 @@ spec:
                       - "8080:8080"
           envVars: {}
       config:
-        - name: gdm-refresh-hook
-          inline:
-            - path: /etc/flightctl/hooks.d/afterupdating/10-restart-gdm.yaml
-              content: |-
-                - run: /usr/bin/systemctl restart gdm
-                  timeout: 10s
-                  if:
-                    - path: /etc/kiosk-mode/bin/url.conf
-                      op: [created, updated]
-                    - path: /var/kiosk/catalog/
-                      op: [created, updated, deleted]
         - name: kiosk-url
           inline:
             - path: /etc/kiosk-mode/bin/url.conf
