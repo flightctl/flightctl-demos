@@ -1,0 +1,7 @@
+apiVersion: flightctl.io/v1beta1
+kind: Repository
+metadata:
+  name: kiosk-content
+spec:
+  type: git
+  url: https://github.com/avishayt/fc-kiosk.git

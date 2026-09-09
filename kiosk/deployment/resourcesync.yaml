@@ -1,0 +1,8 @@
+apiVersion: flightctl.io/v1beta1
+kind: ResourceSync
+metadata:
+  name: kiosk-fleet-sync
+spec:
+  repository: flightctl-demos
+  path: /kiosk/deployment/fleet.yaml
+  targetRevision: fc-kiosk

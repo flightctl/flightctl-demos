@@ -1,0 +1,26 @@
+#!/bin/bash
+exec >> /tmp/kiosk.log 2>&1
+set -e
+
+echo "[kiosk] Starting script at $(date)"
+
+CONFIG_FILE="/etc/kiosk-mode/bin/url.conf"
+DEFAULT_URL="https://github.com/flightctl/flightctl"
+BROWSER="firefox"
+
+echo "[kiosk] DISPLAY=$DISPLAY"
+echo "[kiosk] XAUTHORITY=$XAUTHORITY"
+
+sleep 5
+
+if [[ -f "$CONFIG_FILE" ]]; then
+  URL="$(cat "$CONFIG_FILE")"
+else
+  URL="$DEFAULT_URL"
+fi
+
+echo "[kiosk] Launching: $BROWSER -kiosk $URL"
+"$BROWSER" -kiosk "$URL"
+
+sleep 1.0
+exec "$0" "$@"

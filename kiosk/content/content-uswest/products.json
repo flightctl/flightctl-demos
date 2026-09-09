@@ -1,0 +1,21 @@
+
+[
+  {
+    "name": "Industrial / Manufacturing",
+    "description": "Run your factory floor with confidence. Whether you're deploying predictive maintenance systems or real-time analytics, RHEM gives your edge infrastructure the resilience and speed to keep production humming.",
+    "price": "Runs like clockwork",
+    "image": "images/industrial.png"
+  },
+  {
+    "name": "Retail",
+    "description": "Modernize your retail experience with edge-managed kiosks, smart shelves, and in-store AI. Seamless updates and security — without touching a single store.",
+    "price": "One low-latency experience",
+    "image": "images/retail.png"
+  },
+  {
+    "name": "Healthcare",
+    "description": "Deploy confidently at the edge of care. Whether for imaging systems, hospital automation, or clinical decision support — your data stays close, secure, and compliant.",
+    "price": "Vital signs: all green",
+    "image": "images/healthcare.png"
+  }
+]
