@@ -4,5 +4,5 @@ metadata:
   name: kiosk-fleet-sync
 spec:
   repository: flightctl-demos
-  path: /kiosk/deployment/fleet.yaml
+  path: kiosk/deployment/fleet.yaml
   targetRevision: fc-kiosk
