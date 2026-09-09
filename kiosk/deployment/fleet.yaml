@@ -47,8 +47,7 @@ spec:
           gitRef:
             repository: kiosk-content
             targetRevision: v1
-            path: /{{ .metadata.labels.region }}/var/kiosk/catalog
-            mountPath: /var/kiosk/catalog
+            path: /{{ .metadata.labels.region }}
         - name: gnome-kiosk-script
           gitRef:
             repository: flightctl-demos
