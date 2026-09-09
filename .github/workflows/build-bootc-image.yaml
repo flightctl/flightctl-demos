@@ -25,6 +25,15 @@ on:
         description: '(Optional) Base64-encoded agent config.'
         type: string
         required: false
+      agent-version:
+        description: '(Optional) flightctl-agent version to install.'
+        type: string
+        required: false
+      dry_run:
+        description: 'Build only without pushing to registry (for testing).'
+        type: boolean
+        required: false
+        default: false
   workflow_call:
     inputs:
       demo:
@@ -49,6 +58,15 @@ on:
         description: '(Optional) Base64-encoded agent config.'
         type: string
         required: false
+      agent-version:
+        description: '(Optional) flightctl-agent version to install.'
+        type: string
+        required: false
+      dry_run:
+        description: 'Build only without pushing to registry (for testing).'
+        type: boolean
+        required: false
+        default: false
     secrets:
       OCI_REGISTRY_USERNAME:
         required: true
@@ -60,10 +78,46 @@ on:
         required: false
 
 jobs:
+  preflight:
+    runs-on: ubuntu-24.04
+    outputs:
+      runners: ${{ steps.detect-archs.outputs.runners }}
+      archs: ${{ steps.detect-archs.outputs.archs }}
+    steps:
+      - name: Clone the repository
+        uses: actions/checkout@v4
+
+      - name: Detect available architectures
+        id: detect-archs
+        run: |
+          DEMO_DIR=$([ -d "base/${{ inputs.demo }}" ] && echo "base/${{ inputs.demo }}" || echo "demos/${{ inputs.demo }}")
+          RUNNERS="[]"
+          ARCHS=""
+          for arch in amd64 arm64; do
+            if [ -f "${DEMO_DIR}/bootc/Containerfile.${arch}" ] || [ -f "${DEMO_DIR}/bootc/Containerfile" ]; then
+              if [ "${arch}" = "amd64" ]; then
+                RUNNERS=$(echo "${RUNNERS}" | jq -c '. + ["ubuntu-24.04"]')
+              else
+                RUNNERS=$(echo "${RUNNERS}" | jq -c '. + ["ubuntu-24.04-arm"]')
+              fi
+              ARCHS="${ARCHS} ${arch}"
+            fi
+          done
+          ARCHS=$(echo "${ARCHS}" | xargs)
+          if [ -z "${ARCHS}" ]; then
+            echo "Error: No Containerfile found for any architecture in ${DEMO_DIR}/bootc/"
+            exit 1
+          fi
+          echo "runners=${RUNNERS}" >> $GITHUB_OUTPUT
+          echo "archs=${ARCHS}" >> $GITHUB_OUTPUT
+          echo "Architectures: ${ARCHS}, Runners: ${RUNNERS}"
+
   build-bootc-images:
+    needs: [preflight]
+
     strategy:
       matrix:
-        runner: ["ubuntu-24.04","ubuntu-24.04-arm"]
+        runner: ${{ fromJSON(needs.preflight.outputs.runners) }}
       fail-fast: false
 
     runs-on: ${{ matrix.runner }}
@@ -81,56 +135,57 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Podman 5 and configure it to attach Sigstore signatures
-        env:
-          OCI_REGISTRY: ${{ inputs.oci-registry }}
         run: |
           dnf -y install podman
-          tee "/etc/containers/registries.d/${OCI_REGISTRY}.yaml" > /dev/null <<EOF
+          tee "/etc/containers/registries.d/${{ inputs.oci-registry }}.yaml" > /dev/null <<EOF
             docker:
-              ${OCI_REGISTRY}:
+              ${{ inputs.oci-registry }}:
                 use-sigstore-attachments: true
           EOF
 
       - name: Log in to OCI registry
-        env:
-          OCI_REGISTRY: ${{ inputs.oci-registry }}
-          OCI_USERNAME: ${{ secrets.OCI_REGISTRY_USERNAME }}
-          OCI_PASSWORD: ${{ secrets.OCI_REGISTRY_PASSWORD }}
-        run: printf '%s' "$OCI_PASSWORD" | podman login --username "$OCI_USERNAME" --password-stdin "$OCI_REGISTRY"
+        run: podman login -u '${{ secrets.OCI_REGISTRY_USERNAME }}' -p '${{ secrets.OCI_REGISTRY_PASSWORD }}' ${{ inputs.oci-registry }}
 
       - name: Set env vars
-        env:
-          OCI_REGISTRY: ${{ inputs.oci-registry }}
-          OCI_ORG: ${{ inputs.oci-org }}
-          DEMO: ${{ inputs.demo }}
         run: |
-          printf 'OCI_IMAGE=%s/%s/%s\n' "$OCI_REGISTRY" "$OCI_ORG" "$DEMO" >> "$GITHUB_ENV"
+          echo "OCI_IMAGE=${{ inputs.oci-registry }}/${{ inputs.oci-org }}/${{ inputs.demo }}" >> $GITHUB_ENV
           echo "OCI_IMAGE_TAG=${GITHUB_SHA::8}-${{ env.ARCH }}" >> $GITHUB_ENV
 
       - name: Build bootc image
-        env:
-          DEMO: ${{ inputs.demo }}
         run: |
-          case "$DEMO" in
-            [A-Za-z0-9._-]*) ;;
-            *) echo "invalid demo name" >&2; exit 1 ;;
-          esac
-          pushd -- "$DEMO/bootc"
+          DEMO_DIR=$([ -d "base/${{ inputs.demo }}" ] && echo "base/${{ inputs.demo }}" || echo "demos/${{ inputs.demo }}")
+          pushd ${DEMO_DIR}/bootc
+          # Determine which Containerfile to use (existence verified by preflight)
+          if [ -f "Containerfile.${{ env.ARCH }}" ]; then
+            CONTAINERFILE="Containerfile.${{ env.ARCH }}"
+          else
+            CONTAINERFILE="Containerfile"
+          fi
           if [ -n "${AGENT_CONFIG}" ]; then
             echo "${AGENT_CONFIG}" | base64 -d > config.yaml
-            echo -e "\nADD config.yaml /etc/flightctl/\n" >> Containerfile.${{ env.ARCH }}
+            echo -e "\nADD config.yaml /etc/flightctl/\n" >> ${CONTAINERFILE}
           fi
-          podman build -t ${OCI_IMAGE}:${OCI_IMAGE_TAG} -f Containerfile.${{ env.ARCH }} .
+          BUILD_ARGS=""
+          if [ -n "${{ inputs.agent-version }}" ]; then
+            BUILD_ARGS="--build-arg FLIGHTCTL_VERSION=${{ inputs.agent-version }}"
+          fi
+          podman build ${BUILD_ARGS} -t ${OCI_IMAGE}:${OCI_IMAGE_TAG} -f ${CONTAINERFILE} .
           popd
 
+      - name: Lint bootc image
+        run: podman run --rm ${OCI_IMAGE}:${OCI_IMAGE_TAG} bootc container lint --fatal-warnings --skip var-tmpfiles
+
       - name: Push image to registry and sign it
+        if: ${{ ! inputs.dry_run }}
         run: |
           printf '%s' '${{ secrets.SIGNING_KEY_PRIVATE }}' > ./signingkey.private
           podman push --sign-by-sigstore-private-key ./signingkey.private ${OCI_IMAGE}:${OCI_IMAGE_TAG}
 
 
   build-bootc-manifestlist:
-    needs: [build-bootc-images]
+    needs: [preflight, build-bootc-images]
+
+    if: ${{ ! inputs.dry_run }}
 
     runs-on: ubuntu-24.04
 
@@ -139,37 +194,48 @@ jobs:
       options: --privileged
 
     steps:
+      - name: Clone the repository
+        uses: actions/checkout@v4
+
+      - name: Read tags from Containerfile.tags
+        id: read-tags
+        run: |
+          DEMO_DIR=$([ -d "base/${{ inputs.demo }}" ] && echo "base/${{ inputs.demo }}" || echo "demos/${{ inputs.demo }}")
+          TAGS_FILE="${DEMO_DIR}/bootc/Containerfile.tags"
+          FILE_TAGS=""
+          if [ -f "$TAGS_FILE" ]; then
+            FILE_TAGS=$(cat "$TAGS_FILE" | tr '\n' ',' | sed 's/,$//')
+          fi
+          if [ -n "${{ inputs.tags }}" ] && [ -n "$FILE_TAGS" ]; then
+            ALL_TAGS="${{ inputs.tags }},${FILE_TAGS}"
+          elif [ -n "${{ inputs.tags }}" ]; then
+            ALL_TAGS="${{ inputs.tags }}"
+          else
+            ALL_TAGS="${FILE_TAGS}"
+          fi
+          echo "all_tags=${ALL_TAGS}" >> $GITHUB_OUTPUT
+
       - name: Install container tools and configure them to attach Sigstore signatures
-        env:
-          OCI_REGISTRY: ${{ inputs.oci-registry }}
         run: |
           dnf -y install podman
-          tee "/etc/containers/registries.d/${OCI_REGISTRY}.yaml" > /dev/null <<EOF
+          tee "/etc/containers/registries.d/${{ inputs.oci-registry }}.yaml" > /dev/null <<EOF
             docker:
-              ${OCI_REGISTRY}:
+              ${{ inputs.oci-registry }}:
                 use-sigstore-attachments: true
           EOF
 
       - name: Log in to OCI registry
-        env:
-          OCI_REGISTRY: ${{ inputs.oci-registry }}
-          OCI_USERNAME: ${{ secrets.OCI_REGISTRY_USERNAME }}
-          OCI_PASSWORD: ${{ secrets.OCI_REGISTRY_PASSWORD }}
-        run: printf '%s' "$OCI_PASSWORD" | podman login --username "$OCI_USERNAME" --password-stdin "$OCI_REGISTRY"
+        run: podman login -u '${{ secrets.OCI_REGISTRY_USERNAME }}' -p '${{ secrets.OCI_REGISTRY_PASSWORD }}' ${{ inputs.oci-registry }}
 
       - name: Set env vars
-        env:
-          OCI_REGISTRY: ${{ inputs.oci-registry }}
-          OCI_ORG: ${{ inputs.oci-org }}
-          DEMO: ${{ inputs.demo }}
         run: |
-          printf 'OCI_IMAGE=%s/%s/%s\n' "$OCI_REGISTRY" "$OCI_ORG" "$DEMO" >> "$GITHUB_ENV"
+          echo "OCI_IMAGE=${{ inputs.oci-registry }}/${{ inputs.oci-org }}/${{ inputs.demo }}" >> $GITHUB_ENV
           echo "OCI_IMAGE_TAG=${GITHUB_SHA::8}" >> $GITHUB_ENV
 
       - name: Create manifest list
         run: |
           podman manifest create ${OCI_IMAGE}:${OCI_IMAGE_TAG}
-          for arch in amd64 arm64; do
+          for arch in ${{ needs.preflight.outputs.archs }}; do
             podman manifest add ${OCI_IMAGE}:${OCI_IMAGE_TAG} docker://${OCI_IMAGE}:${OCI_IMAGE_TAG}-${arch}
           done
 
@@ -182,18 +248,12 @@ jobs:
             docker://${OCI_IMAGE}:${OCI_IMAGE_TAG}
 
       - name: Tag manifest list with extra tags, push and sign them
-        if: ${{ inputs.tags != '' }}
-        env:
-          TAGS: ${{ inputs.tags }}
+        if: ${{ steps.read-tags.outputs.all_tags != '' }}
         run: |
           printf '%s' '${{ secrets.SIGNING_KEY_PRIVATE }}' > ./signingkey.private
-          IFS=',' read -r -a tags <<< "$TAGS"
+          IFS=',' read -r -a tags <<< "${{ steps.read-tags.outputs.all_tags }}"
           for tag in "${tags[@]}"; do
             tag=$(echo "${tag}" | tr -d '[:space:]')
-            case "$tag" in
-              [A-Za-z0-9._-]*) ;;
-              *) echo "invalid image tag" >&2; exit 1 ;;
-            esac
             podman tag ${OCI_IMAGE}:${OCI_IMAGE_TAG} ${OCI_IMAGE}:${tag}
             podman manifest push --all \
               --sign-by-sigstore-private-key ./signingkey.private \
