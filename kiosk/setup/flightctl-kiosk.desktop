@@ -1,0 +1,5 @@
+[Desktop Entry]
+Type=Application
+Name=Flight Control kiosk
+Exec=/home/user/.local/bin/flightctl-kiosk-wait
+X-GNOME-Autostart-enabled=true

@@ -1,0 +1,12 @@
+#!/bin/bash
+# Wait for fleet-managed content before opening the kiosk.
+# Keep the unattended demo visible: Xfce locking is separate from X blanking.
+xfconf-query -c xfce4-screensaver -p /lock/enabled --create -t bool -s false
+xfconf-query -c xfce4-screensaver -p /saver/enabled --create -t bool -s false
+xfconf-query -c xfce4-power-manager -p /xfce4-power-manager/lock-screen-suspend-hibernate --create -t bool -s false
+xset s off 2>/dev/null || true
+xset -dpms 2>/dev/null || true
+until curl --fail --silent --max-time 2 http://127.0.0.1:8080/products.json >/dev/null; do
+    sleep 2
+done
+exec firefox --kiosk --new-instance http://127.0.0.1:8080

@@ -11,6 +11,11 @@ The repository includes base bootc images that can be used as foundations for cu
 | [`base/centos-bootc`](base/centos-bootc/) | CentOS Stream 9 bootc base image with Flight Control agent and podman-compose installed. |
 | [`base/fedora-bootc`](base/fedora-bootc/) | Fedora 43 bootc base image with Flight Control agent and podman-compose installed. |
 
+## Kiosk demo on `fc-kiosk`
+
+Follow the [UI walkthrough](kiosk/DEMO-WALKTHROUGH.md) for the two-device regional
+kiosk demo. See [boot images and VM setup](kiosk/BOOT-IMAGES.md) for preparation.
+
 ## Demo Applications
 
 See the [`demos/`](demos/) directory for complete demo applications that showcase specific use cases.
