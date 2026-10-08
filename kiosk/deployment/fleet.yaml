@@ -31,6 +31,41 @@ spec:
                       - "8080:8080"
           envVars: {}
       config:
+        - name: kiosk-screen-lock
+          inline:
+            - path: /etc/kiosk-mode/bin/disable-screen-lock.sh
+              content: |-
+                #!/bin/bash
+                set -euo pipefail
+                export PATH=/usr/sbin:/usr/bin:/sbin:/bin
+                # The Fedora demo image logs into Xfce as user.
+                # Other desktop images do not use these settings.
+                command -v xfconf-query >/dev/null || exit 0
+                if [ "$(id -u)" -eq 0 ]; then
+                  kiosk_uid=$(id -u user)
+                  # Autostart applies the settings if no session exists yet.
+                  [ -S "/run/user/$kiosk_uid/bus" ] || exit 0
+                  exec runuser -u user -- env \
+                    DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$kiosk_uid/bus" \
+                    /usr/bin/bash "$0"
+                fi
+                xfconf-query -c xfce4-screensaver -p /lock/enabled --create -t bool -s false
+                xfconf-query -c xfce4-screensaver -p /saver/enabled --create -t bool -s false
+                xfconf-query -c xfce4-power-manager -p /xfce4-power-manager/lock-screen-suspend-hibernate --create -t bool -s false
+                # Uncover the kiosk if the current session is already locked.
+                xfce4-screensaver-command --exit || true
+            - path: /etc/xdg/autostart/flightctl-disable-screen-lock.desktop
+              content: |-
+                [Desktop Entry]
+                Type=Application
+                Name=Disable kiosk screen lock
+                Exec=/usr/bin/bash /etc/kiosk-mode/bin/disable-screen-lock.sh
+                OnlyShowIn=XFCE;
+                X-GNOME-Autostart-enabled=true
+            - path: /etc/flightctl/hooks.d/afterupdating/10-disable-screen-lock.yaml
+              content: |-
+                - run: /usr/bin/bash /etc/kiosk-mode/bin/disable-screen-lock.sh
+                  timeout: 10s
         - name: kiosk-url
           inline:
             - path: /etc/kiosk-mode/bin/url.conf
