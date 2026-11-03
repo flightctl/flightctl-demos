@@ -191,7 +191,8 @@ Built images are pushed to the OCI registry with the following structure:
 
 **Available tags:**
 
-- `latest` - Always points to the most recent build from main branch
+- `latest` - Convenience alias for the most recent main-branch build; do not
+  use it as a pinned image or artifact reference
 - `<commit-sha>` - Git commit SHA (first 8 chars) for the build
 - `<base-tag>-<timestamp>` - Timestamped versions for base images (e.g., `stream9-202601171430`)
   - Only present when upstream base image was updated
@@ -201,6 +202,7 @@ Built images are pushed to the OCI registry with the following structure:
 **Example tags for centos-bootc:**
 
 ```text
+# Convenience alias only; use a commit-SHA or timestamped tag as a dependency.
 quay.io/flightctl-demos/centos-bootc:latest
 quay.io/flightctl-demos/centos-bootc:abc12345
 quay.io/flightctl-demos/centos-bootc:stream9-202601171430
@@ -209,8 +211,9 @@ quay.io/flightctl-demos/centos-bootc:stream9-202601171430
 ISO and RAW formats are stored as OCI artifacts and must be downloaded using [ORAS](https://oras.land/):
 
 ```bash
-oras pull quay.io/flightctl-demos/centos-bootc/diskimage-iso:latest
-# Or pull a specific timestamped version
+# Pull a specific CI build by commit SHA
+oras pull quay.io/flightctl-demos/centos-bootc/diskimage-iso:abc12345
+# Or pull a timestamped version
 oras pull quay.io/flightctl-demos/centos-bootc/diskimage-iso:stream9-202601171430
 ```
 
@@ -340,6 +343,9 @@ To add a new demo image:
    - Only architectures with a matching Containerfile will be built; the manifest list includes only those
 
 3. Create `bootc/Containerfile.tags` with initial tags:
+
+   This file controls tags published for the new image; `latest` is a
+   convenience output tag, not a tag to use in image references.
 
    ```bash
    echo "latest" > NEW_DEMO/bootc/Containerfile.tags
