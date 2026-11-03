@@ -277,6 +277,9 @@ When modifying Containerfiles (e.g. `Containerfile.amd64`, `Containerfile.arm64`
 ## Flight Control Fleet Definitions
 
 Fleet YAML files in `deploy/` directories define how devices are managed:
+Use a digest or a specific build tag published by CI (a commit-SHA or
+timestamped tag); do not use mutable aliases such as `:latest` for image
+references.
 
 ```yaml
 apiVersion: flightctl.io/v1beta1
@@ -290,7 +293,7 @@ spec:
   template:
     spec:
       os:
-        image: quay.io/flightctl-demos/IMAGE_NAME:latest
+        image: quay.io/flightctl-demos/IMAGE_NAME:<commit-sha-or-timestamped-tag>
       config:
         - name: config-name
           inline:
@@ -326,8 +329,10 @@ To add a new demo image:
 2. Create `bootc/Containerfile.amd64` (and optionally `bootc/Containerfile.arm64` if multi-arch is needed):
 
    - **Demos must use local base images** (they include the flightctl-agent):
-     - CentOS-based: `FROM quay.io/flightctl-demos/centos-bootc:latest`
-     - Fedora-based: `FROM quay.io/flightctl-demos/fedora-bootc:latest`
+     Use the timestamped tag currently listed in the base image's
+     `bootc/Containerfile.tags` file; do not use the mutable `:latest` alias.
+     - CentOS-based: `FROM quay.io/flightctl-demos/centos-bootc:<timestamped-tag>`
+     - Fedora-based: `FROM quay.io/flightctl-demos/fedora-bootc:<timestamped-tag>`
    - Install required packages
    - Add configuration files with `ADD` statements
    - Enable systemd services
