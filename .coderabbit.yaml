@@ -131,7 +131,9 @@ reviews:
         Application container image review — security AND design:
 
         Security:
-        - Pin base images by digest or specific version tag
+        - Pin base images by digest or a specific version/build tag; keep
+          tagged references current through automated refreshes
+        - Flag floating aliases such as :latest, :stable, or major-only tags
         - USER non-root when possible; justify if running as root
         - No secrets or credentials in ENV, ARG, or COPY
         - No package manager cache in final layer
@@ -152,8 +154,9 @@ reviews:
         Flight Control Fleet manifest review:
 
         Security:
-        - Image references should use a specific tag or digest, not
-          just :latest in production fleet definitions
+        - Image references should use a digest or a specific version/build
+          tag that is kept current through automated refreshes
+        - Flag floating aliases such as :latest, :stable, or major-only tags
         - No secrets or credentials in inline config values
         - gitRef repositories should reference trusted sources
 
@@ -185,7 +188,9 @@ reviews:
           should carry a comment explaining why
         - No plaintext passwords or credentials in Environment fields;
           flag and suggest Kubernetes Secrets
-        - Image references should use specific tags or digests
+        - Image references should use digests or specific version/build tags
+          kept current through automated refreshes; flag floating aliases
+          such as :latest, :stable, or major-only tags
 
         Design & correctness:
         - Resource requests/limits should be defined on containers
@@ -204,8 +209,9 @@ reviews:
         Security:
         - No plaintext passwords in Environment= lines; flag and
           suggest podman secrets or environment files
-        - Container images should use specific version tags, not
-          :latest for third-party images
+        - Container images should use digests or specific version/build tags
+          kept current through automated refreshes; flag floating aliases
+          such as :latest, :stable, or major-only tags
         - PublishPort: verify only necessary ports are exposed;
           prefer binding to 127.0.0.1 when external access is not needed
 
@@ -425,10 +431,12 @@ reviews:
           Flag base/**/Containerfile* FROM lines unless the upstream
           image is pinned by digest (@sha256:...).
           Flag other third-party Containerfile FROM lines unless they
-          use either a digest pin or a specific immutable version tag.
+          use a digest pin or a specific version/build tag kept current
+          through automated refreshes.
           Exception: quay.io/flightctl-demos/* images may use digests or
           the timestamped tags produced by this repo's automation.
-          Generic floating tags such as :latest should still be flagged.
+          Generic floating aliases, including :latest, :stable, and
+          major-only tags, should still be flagged.
         mode: "error"
 
       - name: "arch-containerfile-consistency"
