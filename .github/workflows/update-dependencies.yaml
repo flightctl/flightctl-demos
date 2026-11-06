@@ -177,6 +177,19 @@ jobs:
 
           echo "changes_detected=${CHANGES_DETECTED}" >> $GITHUB_OUTPUT
 
+      - name: Rotate base tags for RPM updates
+        if: steps.check-rpms.outputs.changes_detected == 'true'
+        run: |
+          set -euo pipefail
+          TIMESTAMP=$(date -u +%Y%m%d%H%M)
+          CENTOS_TAG="stream9-${TIMESTAMP}"
+          FEDORA_TAG="43-${TIMESTAMP}"
+
+          echo "${CENTOS_TAG}" > base/centos-bootc/bootc/Containerfile.tags
+          echo "${FEDORA_TAG}" > base/fedora-bootc/bootc/Containerfile.tags
+          echo "CENTOS_BOOTC_TAG=${CENTOS_TAG}" >> "$GITHUB_ENV"
+          echo "FEDORA_BOOTC_TAG=${FEDORA_TAG}" >> "$GITHUB_ENV"
+
       - name: Update demo image references
         if: steps.check-images.outputs.changes_detected == 'true' || steps.check-rpms.outputs.changes_detected == 'true'
         run: |
@@ -186,7 +199,13 @@ jobs:
 
           # Update demos that use centos-bootc base
           CENTOS_TAG="${CENTOS_BOOTC_TAG:-latest}"
-          for containerfile in demos/*/bootc/Containerfile demos/*/bootc/*/Containerfile; do
+          for containerfile in \
+            demos/*/bootc/Containerfile \
+            demos/*/bootc/Containerfile.amd64 \
+            demos/*/bootc/Containerfile.arm64 \
+            demos/*/bootc/*/Containerfile \
+            demos/*/bootc/*/Containerfile.amd64 \
+            demos/*/bootc/*/Containerfile.arm64; do
             if [ -f "$containerfile" ] && grep -q "quay.io/flightctl-demos/centos-bootc" "$containerfile"; then
               echo "  Updating $(dirname $containerfile) to use centos-bootc:${CENTOS_TAG}"
               sed -i "s|FROM quay.io/flightctl-demos/centos-bootc[^ ]*|FROM quay.io/flightctl-demos/centos-bootc:${CENTOS_TAG}|" "$containerfile"
@@ -195,7 +214,13 @@ jobs:
 
           # Update demos that use fedora-bootc base
           FEDORA_TAG="${FEDORA_BOOTC_TAG:-latest}"
-          for containerfile in demos/*/bootc/Containerfile demos/*/bootc/*/Containerfile; do
+          for containerfile in \
+            demos/*/bootc/Containerfile \
+            demos/*/bootc/Containerfile.amd64 \
+            demos/*/bootc/Containerfile.arm64 \
+            demos/*/bootc/*/Containerfile \
+            demos/*/bootc/*/Containerfile.amd64 \
+            demos/*/bootc/*/Containerfile.arm64; do
             if [ -f "$containerfile" ] && grep -q "quay.io/flightctl-demos/fedora-bootc" "$containerfile"; then
               echo "  Updating $(dirname $containerfile) to use fedora-bootc:${FEDORA_TAG}"
               sed -i "s|FROM quay.io/flightctl-demos/fedora-bootc[^ ]*|FROM quay.io/flightctl-demos/fedora-bootc:${FEDORA_TAG}|" "$containerfile"
