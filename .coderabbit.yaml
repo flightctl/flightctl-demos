@@ -109,9 +109,12 @@ reviews:
           quay.io/flightctl-demos/ (centos-bootc or fedora-bootc),
           not upstream base images directly
         - Pin third-party images by digest
-        - flightctl-demos base images should use digests or the
-          timestamped tags produced by Containerfile.tags; flag generic
-          floating tags such as :latest
+        - flightctl-demos base images may use timestamped tags from
+          Containerfile.tags only when the updater rotates the tag and
+          updates dependent Containerfiles whenever build inputs change;
+          treat these tags as mutable labels, not immutable pins
+        - Prefer digests or CI-published commit-SHA tags for stable refs
+        - Flag generic floating aliases such as :latest
         - No secrets in ENV, ARG, or COPY
         - No package manager cache in final layer
         - No curl-pipe-bash patterns for package installation
@@ -132,8 +135,8 @@ reviews:
 
         Security:
         - Pin upstream base images by digest; repo-built
-          quay.io/flightctl-demos images may also use timestamped tags from
-          Containerfile.tags or commit-SHA tags published by CI
+          quay.io/flightctl-demos images may also use commit-SHA tags
+          published by CI
         - Flag floating aliases and mutable version tags without a checked-in
           updater, including :latest, :stable, and major-only tags
         - USER non-root when possible; justify if running as root
@@ -157,8 +160,8 @@ reviews:
 
         Security:
         - Pin image references by digest; repo-built
-          quay.io/flightctl-demos images may also use timestamped tags from
-          Containerfile.tags or commit-SHA tags published by CI
+          quay.io/flightctl-demos images may also use commit-SHA tags
+          published by CI
         - Flag floating aliases and mutable version tags without a checked-in
           updater, including :latest, :stable, and major-only tags
         - No secrets or credentials in inline config values
@@ -193,8 +196,8 @@ reviews:
         - No plaintext passwords or credentials in Environment fields;
           flag and suggest Kubernetes Secrets
         - Pin image references by digest; repo-built
-          quay.io/flightctl-demos images may also use timestamped tags from
-          Containerfile.tags or commit-SHA tags published by CI
+          quay.io/flightctl-demos images may also use commit-SHA tags
+          published by CI
         - Flag floating aliases and mutable version tags without a checked-in
           updater, including :latest, :stable, and major-only tags
 
@@ -216,8 +219,8 @@ reviews:
         - No plaintext passwords in Environment= lines; flag and
           suggest podman secrets or environment files
         - Pin image references by digest; repo-built
-          quay.io/flightctl-demos images may also use timestamped tags from
-          Containerfile.tags or commit-SHA tags published by CI
+          quay.io/flightctl-demos images may also use commit-SHA tags
+          published by CI
         - Flag floating aliases and mutable version tags without a checked-in
           updater, including :latest, :stable, and major-only tags
         - PublishPort: verify only necessary ports are exposed;
@@ -439,11 +442,14 @@ reviews:
           Flag base/**/Containerfile* FROM lines unless the upstream
           image is pinned by digest (@sha256:...).
           Flag other third-party Containerfile FROM lines unless they
-          use a digest pin. Exception: repo-built quay.io/flightctl-demos/*
-          images may also use timestamped tags from Containerfile.tags or
-          commit-SHA tags published by CI.
-          Flag mutable version tags without a checked-in updater, along
-          with floating aliases such as :latest, :stable, and major-only tags.
+          use a digest pin. Repo-built quay.io/flightctl-demos/* images may
+          use commit-SHA tags published by CI. Exception: demo bootc
+          Containerfiles may use a timestamped base-image tag from
+          Containerfile.tags only when the tag and every dependent reference
+          are updated whenever build inputs change. Treat timestamped tags as
+          mutable version labels, not immutable pins. Flag other mutable
+          version tags and floating aliases such as :latest, :stable, and
+          major-only tags unless a checked-in updater maintains the reference.
         mode: "error"
 
       - name: "arch-containerfile-consistency"

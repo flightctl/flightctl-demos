@@ -131,10 +131,11 @@ The repository uses the following GitHub Actions workflows for building and publ
 - **Checks RPM packages**: Parses repository metadata from `rpm.flightctl.io` for flightctl-agent updates
   - EPEL 9 (for CentOS): `https://rpm.flightctl.io/epel/9/x86_64`
   - Fedora 43: `https://rpm.flightctl.io/fedora/43/x86_64`
-- **Updates files** when changes detected:
+- **Updates files** when changes are detected:
   - Updates `Containerfile.{amd64,arm64}` with new image digests
   - Updates `ARG FLIGHTCTL_VERSION` with new RPM package versions
-  - Creates timestamped tags in `Containerfile.tags` (format: `stream9-202601171430`)
+  - Creates or rotates timestamped tags in `Containerfile.tags` when base
+    image digests or agent RPM versions change
   - Updates demo Containerfiles that reference base images to use the new timestamped tags
 - **Creates a single PR** with all updates bundled together for easy review
 
@@ -146,8 +147,12 @@ The repository uses the following GitHub Actions workflows for building and publ
 
 Each image directory contains a `Containerfile.tags` file that specifies custom tags to apply when building that image. This enables:
 
-- **Timestamped versions**: Base images get dated tags (e.g., `stream9-202601171430`) when upstream updates are detected
-- **Reproducible builds**: Demo images can reference specific timestamped base image versions
+- **Timestamped release labels**: Base images get dated tags (e.g.,
+  `stream9-202601171430`) when upstream images or agent RPMs change
+- **Tracked refreshes**: The updater rotates the tag and updates dependent
+  demo Containerfiles when these inputs change
+- Timestamped tags are mutable output labels. Use a digest or CI commit-SHA
+  tag when an immutable reference is required.
 - **Audit trail**: Each update creates a unique tag, making it easy to track which version was deployed when
 
 **Format:** Comma-separated list of tags, one per line or all on one line:
@@ -165,12 +170,15 @@ latest
 
 **Nightly update process:**
 
-1. Workflow detects new upstream base image digest using `skopeo inspect`
-2. Updates `Containerfile.{amd64,arm64}` with new `@sha256:...` digest
-3. Generates timestamped tag: `<base-tag>-<YYYYMMDDHHmm>` (e.g., `stream9-202601171430`)
-4. Writes timestamped tag to `Containerfile.tags`
-5. Updates demo images that depend on this base to use the new timestamped tag
-6. Creates PR with all changes
+1. Workflow detects new upstream base image digests and agent RPM versions.
+2. Updates `Containerfile.{amd64,arm64}` with new digests and
+   `ARG FLIGHTCTL_VERSION` values.
+3. Generates or rotates timestamped tags: `<base-tag>-<YYYYMMDDHHmm>` (e.g.,
+   `stream9-202601171430`).
+4. Writes the new tags to `Containerfile.tags`
+5. Updates dependent demo Containerfiles, including architecture-specific
+   files, to use the new timestamped tags.
+6. Creates a PR with all changes
 
 **Example workflow:**
 
@@ -280,9 +288,8 @@ When modifying Containerfiles (e.g. `Containerfile.amd64`, `Containerfile.arm64`
 ## Flight Control Fleet Definitions
 
 Fleet YAML files in `deploy/` directories define how devices are managed:
-Use a digest or a specific build tag published by CI (a commit-SHA or
-timestamped tag); do not use mutable aliases such as `:latest` for image
-references.
+Fleet references must use a digest or a CI-published commit-SHA tag. Flag
+mutable aliases such as `:latest` and timestamped tags.
 
 ```yaml
 apiVersion: flightctl.io/v1beta1
@@ -296,7 +303,7 @@ spec:
   template:
     spec:
       os:
-        image: quay.io/flightctl-demos/IMAGE_NAME:<commit-sha-or-timestamped-tag>
+        image: quay.io/flightctl-demos/IMAGE_NAME:<published-commit-sha>
       config:
         - name: config-name
           inline:
@@ -351,11 +358,15 @@ To add a new demo image:
    echo "latest" > NEW_DEMO/bootc/Containerfile.tags
    ```
 
-4. Create `deploy/fleet.yaml` with appropriate fleet configuration
+4. (Optional) Add runtime configuration in `configuration/`
 
-5. (Optional) Add runtime configuration in `configuration/`
+5. Open an initial PR with the image and configuration files. The PR
+   validation workflow builds and tests the image. After merge,
+   `publish-on-merge` publishes it with the merge commit SHA tag.
 
-6. Open a PR - the PR validation workflow will automatically build and test your new image. After merge, it will be published to the registry
+6. Add `deploy/fleet.yaml` in a follow-up PR using the published commit-SHA
+   tag. Apply the Fleet after that PR merges, when the image reference exists
+   in the registry.
 
 ## Prerequisites for Building Custom Images
 
